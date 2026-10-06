@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function esDueno(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read, write: if esDueno(uid);
+
+      match /categorias/{id} {
+        function categoriaValida() {
+          let d = request.resource.data;
+          return d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 40
+            && d.tipo in ['gasto', 'ingreso']
+            && d.icono is string
+            && d.color is string
+            && d.orden is int
+            && d.sistema is bool
+            && d.archivada is bool;
+        }
+
+        allow read: if esDueno(uid);
+        allow create: if esDueno(uid) && categoriaValida();
+        allow update: if esDueno(uid) && categoriaValida()
+          && request.resource.data.sistema == resource.data.sistema
+          && !(resource.data.sistema && request.resource.data.archivada);
+        allow delete: if false;
+      }
+
+      match /movimientos/{id} {
+        function movimientoValido() {
+          let d = request.resource.data;
+          return d.tipo in ['gasto', 'ingreso']
+            && d.monto is int && d.monto > 0
+            && d.categoriaId is string && d.categoriaId.size() > 0
+            && d.fecha is string && d.fecha.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+            && (!('nota' in d) || (d.nota is string && d.nota.size() <= 200));
+        }
+
+        allow read, delete: if esDueno(uid);
+        allow create, update: if esDueno(uid) && movimientoValido();
+      }
+    }
+  }
+}
