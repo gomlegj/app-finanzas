@@ -1,12 +1,16 @@
+import { useCallback, useState } from 'react';
 import { Link, Outlet } from 'react-router';
 import { CloudOff, UserRound } from 'lucide-react';
 import { useUsuario } from '../features/auth/contexto';
+import { RegistroRapido } from '../features/movimientos/RegistroRapido';
 import { useEnLinea } from '../lib/useEnLinea';
 import { BottomNav } from './BottomNav';
 
 export function Layout() {
   const usuario = useUsuario();
   const enLinea = useEnLinea();
+  const [registroAbierto, setRegistroAbierto] = useState(false);
+  const cerrarRegistro = useCallback(() => setRegistroAbierto(false), []);
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col">
@@ -36,7 +40,8 @@ export function Layout() {
       <main className="flex-1 px-5 pb-28">
         <Outlet />
       </main>
-      <BottomNav onAgregar={() => {}} />
+      <BottomNav onAgregar={() => setRegistroAbierto(true)} />
+      <RegistroRapido abierta={registroAbierto} onCerrar={cerrarRegistro} />
     </div>
   );
 }
