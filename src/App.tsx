@@ -3,6 +3,7 @@ import { Layout } from './components/Layout';
 import { LoginPage } from './features/auth/LoginPage';
 import { useAuth } from './features/auth/contexto';
 import { InicioPage } from './features/inicio/InicioPage';
+import { MovimientosPage } from './features/movimientos/MovimientosPage';
 
 export default function App() {
   const { usuario, cargando } = useAuth();
@@ -16,6 +17,7 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<InicioPage />} />
+        <Route path="movimientos" element={<MovimientosPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
