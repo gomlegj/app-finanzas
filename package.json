@@ -12,7 +12,7 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "test:rules": "firebase emulators:exec --only firestore --project demo-finanzas \"vitest run --config vitest.rules.config.ts\"",
-    "emuladores": "firebase emulators:start --project demo-finanzas"
+    "emuladores": "firebase emulators:start --only auth,firestore --project demo-finanzas"
   },
   "dependencies": {
     "date-fns": "^4.4.0",
