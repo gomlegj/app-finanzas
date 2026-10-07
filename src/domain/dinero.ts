@@ -23,3 +23,17 @@ export function parsearMonto(texto: string): number | null {
 export function agruparMiles(texto: string): string {
   return digitosEnteros(texto).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
+
+/**
+ * Nuevo texto del campo de monto mientras se escribe.
+ * La parte decimal queda visible (para que no se sume a los miles), pero `parsearMonto` la descarta.
+ * Un monto pegado con comas de miles ("1,500,000") se interpreta como tal.
+ */
+export function actualizarTextoMonto(escrito: string): string {
+  const compacto = escrito.replace(/[\s$]/g, '');
+  if (/^\d{1,3}(,\d{3})+$/.test(compacto)) return agruparMiles(compacto.replace(/,/g, ''));
+  const coma = escrito.indexOf(',');
+  if (coma === -1) return agruparMiles(escrito);
+  const decimales = escrito.slice(coma + 1).replace(/\D/g, '').slice(0, 2);
+  return `${agruparMiles(escrito.slice(0, coma)) || '0'},${decimales}`;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agruparMiles, formatearMonto, parsearMonto } from './dinero';
+import { actualizarTextoMonto, agruparMiles, formatearMonto, parsearMonto } from './dinero';
 
 const sinEspeciales = (texto: string) => texto.replace(/\s/g, ' ');
 
@@ -49,5 +49,31 @@ describe('agruparMiles', () => {
 
   it('quita ceros a la izquierda', () => {
     expect(agruparMiles('0015')).toBe('15');
+  });
+});
+
+describe('actualizarTextoMonto', () => {
+  const teclear = (teclas: string) => [...teclas].reduce((texto, tecla) => actualizarTextoMonto(texto + tecla), '');
+
+  it('agrupa miles tecla por tecla', () => {
+    expect(teclear('1500000')).toBe('1.500.000');
+  });
+
+  it('conserva la parte decimal visible tecla por tecla, sin sumarla a los miles', () => {
+    expect(teclear('15000,50')).toBe('15.000,50');
+    expect(parsearMonto(teclear('15000,50'))).toBe(15000);
+  });
+
+  it('admite una sola coma y máximo 2 decimales', () => {
+    expect(teclear('15000,5,0')).toBe('15.000,50');
+    expect(teclear('15000,999')).toBe('15.000,99');
+  });
+
+  it('interpreta comas de miles al pegar (1,500,000)', () => {
+    expect(actualizarTextoMonto('1,500,000')).toBe('1.500.000');
+  });
+
+  it('al pegar con decimales los conserva visibles', () => {
+    expect(actualizarTextoMonto('15.000,50')).toBe('15.000,50');
   });
 });

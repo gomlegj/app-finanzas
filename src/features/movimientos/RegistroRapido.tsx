@@ -8,7 +8,7 @@ import { useToast } from '../../components/toastContexto';
 import { useCategorias } from '../../data/hooks';
 import { actualizarMovimiento, borrarMovimiento, crearMovimiento } from '../../data/movimientos';
 import { categoriasActivas } from '../../domain/categorias';
-import { agruparMiles, parsearMonto } from '../../domain/dinero';
+import { actualizarTextoMonto, agruparMiles, formatearMonto, parsearMonto } from '../../domain/dinero';
 import { fechaLocalISO } from '../../domain/fechas';
 import {
   MAX_NOTA,
@@ -97,10 +97,15 @@ function FormularioMovimiento({ movimiento, onListo }: { movimiento?: Movimiento
             autoFocus
             placeholder="0"
             value={montoTexto}
-            onChange={(e) => setMontoTexto(agruparMiles(e.target.value))}
+            onChange={(e) => setMontoTexto(actualizarTextoMonto(e.target.value))}
             className="w-full min-w-0 bg-transparent text-center text-4xl font-bold tabular-nums text-slate-900 outline-none placeholder:text-slate-300"
           />
         </div>
+        {montoTexto.includes(',') && parsearMonto(montoTexto) !== null && (
+          <p className="mt-1 text-center text-sm text-amber-700">
+            Sin centavos: se guardará {formatearMonto(parsearMonto(montoTexto) ?? 0)}
+          </p>
+        )}
         <MensajeError mensaje={errores.monto} />
       </div>
 

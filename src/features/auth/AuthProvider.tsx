@@ -9,15 +9,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(
     () =>
-      onAuthStateChanged(auth, async (usuario) => {
-        if (usuario) {
-          try {
-            await asegurarPerfil(usuario);
-          } catch (error) {
-            console.error('No se pudo preparar el perfil', error);
-          }
-        }
+      onAuthStateChanged(auth, (usuario) => {
+        // No se bloquea la app esperando la red: con caché local abre al instante.
         setEstado({ usuario, cargando: false });
+        if (usuario) {
+          asegurarPerfil(usuario).catch((error) => console.error('No se pudo preparar el perfil', error));
+        }
       }),
     [],
   );
