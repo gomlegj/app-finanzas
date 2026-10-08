@@ -3,10 +3,12 @@ import { Link } from 'react-router';
 import { FilaMovimiento } from '../../components/FilaMovimiento';
 import { useCategorias, useMovimientosEntre, usePerfil } from '../../data/hooks';
 import { formatearMonto } from '../../domain/dinero';
-import { mesActual, nombreMes, rangoMes } from '../../domain/fechas';
-import { sumarPorTipo, type Movimiento } from '../../domain/movimientos';
+import type { Movimiento } from '../../domain/movimientos';
+import { resumenQuincena } from '../../domain/presupuesto';
+import { DIAS_PAGO_POR_DEFECTO, etiquetaQuincena, quincenaDe } from '../../domain/quincena';
 import { useUsuario } from '../auth/contexto';
 import { RegistroRapido } from '../movimientos/RegistroRapido';
+import { GastoPorCategoria } from './GastoPorCategoria';
 
 const CANTIDAD_ULTIMOS = 5;
 
@@ -14,16 +16,14 @@ export function InicioPage() {
   const usuario = useUsuario();
   const [editando, setEditando] = useState<Movimiento | undefined>();
 
-  const mes = mesActual();
-  const { desde, hasta } = rangoMes(mes.anio, mes.mes);
-  const { datos: movimientos, cargando } = useMovimientosEntre(usuario.uid, desde, hasta);
-  const { datos: categorias } = useCategorias(usuario.uid);
   const { datos: perfil } = usePerfil(usuario.uid);
   const moneda = perfil?.moneda ?? 'COP';
+  const quincena = quincenaDe(new Date(), perfil?.diasPago ?? DIAS_PAGO_POR_DEFECTO);
+  const { datos: movimientos, cargando, error } = useMovimientosEntre(usuario.uid, quincena.desde, quincena.hasta);
+  const { datos: categorias } = useCategorias(usuario.uid);
 
   const porId = new Map(categorias.map((c) => [c.id, c]));
-  const totales = sumarPorTipo(movimientos);
-  const balance = totales.ingresos - totales.gastos;
+  const resumen = resumenQuincena(movimientos);
   const ultimos = movimientos.slice(0, CANTIDAD_ULTIMOS);
   const nombre = (perfil?.nombre || usuario.displayName || '').split(' ')[0];
 
@@ -32,18 +32,34 @@ export function InicioPage() {
       <p className="text-slate-500">Hola{nombre ? `, ${nombre}` : ''} 👋</p>
 
       <section className="rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 p-5 text-white shadow-lg shadow-emerald-500/20">
-        <p className="text-sm opacity-80">Balance de {nombreMes(mes.anio, mes.mes).toLowerCase()}</p>
-        <p className="mt-1 text-3xl font-bold tabular-nums">{formatearMonto(balance, moneda)}</p>
+        <p className="text-sm opacity-80">Quincena actual · {etiquetaQuincena(quincena)}</p>
+        <p className="mt-3 text-sm opacity-80">Disponible</p>
+        <p className="text-3xl font-bold tabular-nums">{formatearMonto(resumen.disponible, moneda)}</p>
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
           <div>
             <p className="opacity-80">Ingresos</p>
-            <p className="font-semibold tabular-nums">{formatearMonto(totales.ingresos, moneda)}</p>
+            <p className="font-semibold tabular-nums">{formatearMonto(resumen.ingresos, moneda)}</p>
           </div>
           <div>
-            <p className="opacity-80">Gastos</p>
-            <p className="font-semibold tabular-nums">{formatearMonto(totales.gastos, moneda)}</p>
+            <p className="opacity-80">Gastado</p>
+            <p className="font-semibold tabular-nums">{formatearMonto(resumen.gastado, moneda)}</p>
           </div>
         </div>
+      </section>
+
+      {error && (
+        <p role="alert" className="rounded-2xl bg-rose-50 p-4 text-center text-sm text-rose-700">
+          No se pudieron cargar tus movimientos. Revisa tu conexión.
+        </p>
+      )}
+
+      <section>
+        <h2 className="mb-2 font-semibold text-slate-900">¿En qué se fue?</h2>
+        {cargando ? (
+          <p className="py-6 text-center text-slate-400">Cargando…</p>
+        ) : (
+          <GastoPorCategoria movimientos={movimientos} categorias={porId} moneda={moneda} />
+        )}
       </section>
 
       <section>
@@ -57,7 +73,7 @@ export function InicioPage() {
           <p className="py-6 text-center text-slate-400">Cargando…</p>
         ) : ultimos.length === 0 ? (
           <div className="rounded-2xl bg-white p-6 text-center text-slate-500 shadow-sm">
-            Aún no tienes movimientos este mes.
+            Aún no tienes movimientos en esta quincena.
             <br />
             Toca <strong className="text-emerald-600">+</strong> para registrar el primero.
           </div>
