@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { actualizarTextoMonto, agruparMiles, formatearMonto, parsearMonto } from './dinero';
+import { MONEDAS_DISPONIBLES, actualizarTextoMonto, agruparMiles, formatearMonto, parsearMonto } from './dinero';
 
 const sinEspeciales = (texto: string) => texto.replace(/\s/g, ' ');
 
@@ -75,5 +75,12 @@ describe('actualizarTextoMonto', () => {
 
   it('al pegar con decimales los conserva visibles', () => {
     expect(actualizarTextoMonto('15.000,50')).toBe('15.000,50');
+  });
+});
+
+describe('MONEDAS_DISPONIBLES', () => {
+  it('todas se pueden formatear y COP va primero', () => {
+    expect(MONEDAS_DISPONIBLES[0].codigo).toBe('COP');
+    for (const { codigo } of MONEDAS_DISPONIBLES) expect(() => formatearMonto(1000, codigo)).not.toThrow();
   });
 });

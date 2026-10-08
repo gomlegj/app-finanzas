@@ -1,3 +1,13 @@
+export const MONEDAS_DISPONIBLES: readonly { codigo: string; nombre: string }[] = [
+  { codigo: 'COP', nombre: 'Peso colombiano' },
+  { codigo: 'USD', nombre: 'Dólar estadounidense' },
+  { codigo: 'EUR', nombre: 'Euro' },
+  { codigo: 'MXN', nombre: 'Peso mexicano' },
+  { codigo: 'PEN', nombre: 'Sol peruano' },
+  { codigo: 'CLP', nombre: 'Peso chileno' },
+  { codigo: 'ARS', nombre: 'Peso argentino' },
+];
+
 export function formatearMonto(monto: number, moneda = 'COP'): string {
   return new Intl.NumberFormat('es-CO', {
     style: 'currency',

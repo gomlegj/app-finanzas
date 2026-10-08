@@ -7,6 +7,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
+import { MONEDAS_DISPONIBLES } from '../../src/domain/dinero';
 
 const ALICIA = 'alicia';
 const BETO = 'beto';
@@ -139,5 +140,31 @@ describe('categorías', () => {
 describe('colecciones de fases futuras', () => {
   it.each(['fijos', 'metas', 'deudas'])('rechaza escribir en %s', async (coleccion) => {
     await assertFails(setDoc(doc(como(ALICIA), `users/${ALICIA}/${coleccion}/x`), { nombre: 'x' }));
+  });
+});
+
+describe('perfil validado', () => {
+  const perfil = (uid: string) => doc(como(uid), 'users', uid);
+  const base = { nombre: 'Alicia', email: 'a@x.com', moneda: 'COP', diasPago: [15, 30] };
+
+  it('acepta perfil completo y cambios válidos', async () => {
+    await assertSucceeds(setDoc(perfil(ALICIA), base));
+    await assertSucceeds(updateDoc(perfil(ALICIA), { diasPago: [1, 15] }));
+  });
+
+  it.each(MONEDAS_DISPONIBLES.map((m) => m.codigo))('acepta la moneda %s', async (codigo) => {
+    await assertSucceeds(setDoc(perfil(ALICIA), { ...base, moneda: codigo }));
+  });
+
+  it.each([
+    ['moneda desconocida', { moneda: 'XYZ' }],
+    ['día 0', { diasPago: [0, 15] }],
+    ['día 32', { diasPago: [15, 32] }],
+    ['días iguales', { diasPago: [15, 15] }],
+    ['un solo día', { diasPago: [15] }],
+    ['día decimal', { diasPago: [15.5, 30] }],
+    ['días como texto', { diasPago: '15,30' }],
+  ])('rechaza %s', async (_n, cambio) => {
+    await assertFails(setDoc(perfil(ALICIA), { ...base, ...cambio }));
   });
 });

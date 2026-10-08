@@ -7,7 +7,19 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read, write: if esDueno(uid);
+      function perfilValido() {
+        let d = request.resource.data;
+        return (!('moneda' in d) || d.moneda in ['COP', 'USD', 'EUR', 'MXN', 'PEN', 'CLP', 'ARS'])
+          && (!('diasPago' in d) || (
+            d.diasPago is list && d.diasPago.size() == 2
+            && d.diasPago[0] is int && d.diasPago[1] is int
+            && d.diasPago[0] >= 1 && d.diasPago[0] <= 31
+            && d.diasPago[1] >= 1 && d.diasPago[1] <= 31
+            && d.diasPago[0] != d.diasPago[1]));
+      }
+
+      allow read, delete: if esDueno(uid);
+      allow create, update: if esDueno(uid) && perfilValido();
 
       match /categorias/{id} {
         function categoriaValida() {
