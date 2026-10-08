@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ChevronRight, LogOut, Tags, UserRound } from 'lucide-react';
+import { CalendarDays, ChevronRight, LogOut, Tags, UserRound } from 'lucide-react';
 import { useToast } from '../../components/toastContexto';
 import { salir } from '../auth/acciones';
 import { useUsuario } from '../auth/contexto';
@@ -25,6 +25,11 @@ export function AjustesPage() {
       </div>
 
       <div className="rounded-2xl bg-white p-1 shadow-sm">
+        <Link to="/ajustes/quincenas" className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-slate-50">
+          <CalendarDays size={20} className="text-emerald-600" />
+          <span className="flex-1 font-medium text-slate-800">Quincenas y moneda</span>
+          <ChevronRight size={18} className="text-slate-400" />
+        </Link>
         <Link to="/ajustes/categorias" className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-slate-50">
           <Tags size={20} className="text-emerald-600" />
           <span className="flex-1 font-medium text-slate-800">Categorías</span>
