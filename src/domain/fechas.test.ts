@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { desplazarMes, etiquetaFecha, fechaLocalISO, mesActual, nombreMes, rangoMes } from './fechas';
+import { desplazarMes, etiquetaFecha, fechaCorta, fechaLocalISO, mesActual, nombreMes, rangoMes } from './fechas';
 
 describe('fechaLocalISO', () => {
   it('usa la fecha local aunque sea de noche', () => {
@@ -47,5 +47,12 @@ describe('meses', () => {
 
   it('nombreMes', () => {
     expect(nombreMes(2026, 9)).toBe('Octubre 2026');
+  });
+});
+
+describe('fechaCorta', () => {
+  it('muestra día y mes abreviado', () => {
+    expect(fechaCorta('2026-09-30')).toBe('30 sep');
+    expect(fechaCorta('2027-01-04')).toBe('4 ene');
   });
 });

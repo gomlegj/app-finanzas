@@ -43,3 +43,8 @@ export function rangoMes(anio: number, mes: number): { desde: string; hasta: str
 export function nombreMes(anio: number, mes: number): string {
   return `${MESES[mes]} ${anio}`;
 }
+
+export function fechaCorta(iso: string): string {
+  const fecha = parseISO(iso);
+  return `${fecha.getDate()} ${MESES_CORTOS[fecha.getMonth()]}`;
+}
