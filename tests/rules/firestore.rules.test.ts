@@ -164,6 +164,9 @@ describe('perfil validado', () => {
     ['un solo día', { diasPago: [15] }],
     ['día decimal', { diasPago: [15.5, 30] }],
     ['días como texto', { diasPago: '15,30' }],
+    ['días desordenados', { diasPago: [30, 15] }],
+    ['primer día después del 27', { diasPago: [28, 31] }],
+    ['pagos separados 1 día', { diasPago: [15, 16] }],
   ])('rechaza %s', async (_n, cambio) => {
     await assertFails(setDoc(perfil(ALICIA), { ...base, ...cambio }));
   });

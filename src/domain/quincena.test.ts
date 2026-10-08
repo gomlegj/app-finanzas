@@ -83,4 +83,16 @@ describe('días de pago', () => {
     expect(validarDiasPago(Number.NaN, 30)).toBe('Usa días entre 1 y 31');
     expect(validarDiasPago(15, 15)).toBe('Los días de pago deben ser distintos');
   });
+
+  it('exige que el primer pago sea máximo el 27 para que la quincena 1 exista todos los meses', () => {
+    expect(validarDiasPago(28, 31)).toBe('El primer día de pago debe ser máximo el 27');
+    expect(validarDiasPago(31, 28)).toBe('El primer día de pago debe ser máximo el 27');
+    expect(validarDiasPago(27, 30)).toBeNull();
+  });
+
+  it('exige al menos 2 días entre pagos, sin importar el orden', () => {
+    expect(validarDiasPago(15, 16)).toBe('Deja al menos 2 días entre los pagos');
+    expect(validarDiasPago(16, 15)).toBe('Deja al menos 2 días entre los pagos');
+    expect(validarDiasPago(30, 15)).toBeNull();
+  });
 });

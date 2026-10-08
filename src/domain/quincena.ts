@@ -60,5 +60,9 @@ export function validarDiasPago(d1: number, d2: number): string | null {
   const valido = (d: number) => Number.isInteger(d) && d >= 1 && d <= 31;
   if (!valido(d1) || !valido(d2)) return 'Usa días entre 1 y 31';
   if (d1 === d2) return 'Los días de pago deben ser distintos';
+  // Con el primer pago ≤ 27 la quincena 1 existe incluso en febrero.
+  const [primero, segundo] = ordenarDiasPago([d1, d2]);
+  if (primero > 27) return 'El primer día de pago debe ser máximo el 27';
+  if (segundo - primero < 2) return 'Deja al menos 2 días entre los pagos';
   return null;
 }

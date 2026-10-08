@@ -15,7 +15,8 @@ service cloud.firestore {
             && d.diasPago[0] is int && d.diasPago[1] is int
             && d.diasPago[0] >= 1 && d.diasPago[0] <= 31
             && d.diasPago[1] >= 1 && d.diasPago[1] <= 31
-            && d.diasPago[0] != d.diasPago[1]));
+            && d.diasPago[0] <= 27
+            && d.diasPago[1] - d.diasPago[0] >= 2));
       }
 
       allow read, delete: if esDueno(uid);
