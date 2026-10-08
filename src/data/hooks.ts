@@ -9,15 +9,22 @@ import { escucharPerfil, type Perfil } from './usuario';
 interface Escucha<T> {
   datos: T;
   cargando: boolean;
+  error: boolean;
 }
 
+type Suscribir<T> = (alCambiar: (datos: T) => void, alFallar: () => void) => Unsubscribe;
+
 /** Mantiene una suscripción de Firestore viva mientras `clave` no cambie. */
-function useEscucha<T>(suscribir: (alCambiar: (datos: T) => void) => Unsubscribe, clave: string, inicial: T): Escucha<T> {
-  const [estado, setEstado] = useState<Escucha<T>>({ datos: inicial, cargando: true });
+function useEscucha<T>(suscribir: Suscribir<T>, clave: string, inicial: T): Escucha<T> {
+  const [estado, setEstado] = useState<Escucha<T>>({ datos: inicial, cargando: true, error: false });
 
   useEffect(() => {
-    setEstado((previo) => ({ ...previo, cargando: true }));
-    return suscribir((datos) => setEstado({ datos, cargando: false }));
+    // Se descartan los datos anteriores: evita mostrar totales de otro periodo bajo el título nuevo.
+    setEstado({ datos: inicial, cargando: true, error: false });
+    return suscribir(
+      (datos) => setEstado({ datos, cargando: false, error: false }),
+      () => setEstado((previo) => ({ ...previo, cargando: false, error: true })),
+    );
     // `clave` resume todos los parámetros de `suscribir`.
   }, [clave]);
 
@@ -27,16 +34,16 @@ function useEscucha<T>(suscribir: (alCambiar: (datos: T) => void) => Unsubscribe
 const SIN_DATOS: never[] = [];
 
 export function usePerfil(uid: string): Escucha<Perfil | null> {
-  return useEscucha<Perfil | null>((cb) => escucharPerfil(uid, cb), `perfil:${uid}`, null);
+  return useEscucha<Perfil | null>((cb, falla) => escucharPerfil(uid, cb, falla), `perfil:${uid}`, null);
 }
 
 export function useCategorias(uid: string): Escucha<Categoria[]> {
-  return useEscucha<Categoria[]>((cb) => escucharCategorias(uid, cb), `categorias:${uid}`, SIN_DATOS);
+  return useEscucha<Categoria[]>((cb, falla) => escucharCategorias(uid, cb, falla), `categorias:${uid}`, SIN_DATOS);
 }
 
 export function useMovimientosEntre(uid: string, desde: string, hasta: string): Escucha<Movimiento[]> {
   return useEscucha<Movimiento[]>(
-    (cb) => escucharMovimientosEntre(uid, desde, hasta, cb),
+    (cb, falla) => escucharMovimientosEntre(uid, desde, hasta, cb, falla),
     `movimientos:${uid}:${desde}:${hasta}`,
     SIN_DATOS,
   );

@@ -4,11 +4,18 @@ import { db } from '../lib/firebase';
 
 const coleccion = (uid: string) => collection(db, 'users', uid, 'categorias');
 
-export function escucharCategorias(uid: string, alCambiar: (categorias: Categoria[]) => void): Unsubscribe {
+export function escucharCategorias(
+  uid: string,
+  alCambiar: (categorias: Categoria[]) => void,
+  alFallar?: (error: unknown) => void,
+): Unsubscribe {
   return onSnapshot(
     coleccion(uid),
     (snap) => alCambiar(snap.docs.map((d) => ({ id: d.id, ...(d.data() as DatosCategoria) }))),
-    (error) => console.error('Error escuchando categorías', error),
+    (error) => {
+      console.error('Error escuchando categorías', error);
+      alFallar?.(error);
+    },
   );
 }
 

@@ -22,6 +22,7 @@ export function escucharMovimientosEntre(
   desde: string,
   hasta: string,
   alCambiar: (movimientos: Movimiento[]) => void,
+  alFallar?: (error: unknown) => void,
 ): Unsubscribe {
   const consulta = query(
     coleccion(uid),
@@ -32,7 +33,10 @@ export function escucharMovimientosEntre(
   return onSnapshot(
     consulta,
     (snap) => alCambiar(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Movimiento, 'id'>) }))),
-    (error) => console.error('Error escuchando movimientos', error),
+    (error) => {
+      console.error('Error escuchando movimientos', error);
+      alFallar?.(error);
+    },
   );
 }
 

@@ -31,11 +31,18 @@ export async function asegurarPerfil(usuario: User): Promise<void> {
   await lote.commit();
 }
 
-export function escucharPerfil(uid: string, alCambiar: (perfil: Perfil | null) => void): Unsubscribe {
+export function escucharPerfil(
+  uid: string,
+  alCambiar: (perfil: Perfil | null) => void,
+  alFallar?: (error: unknown) => void,
+): Unsubscribe {
   return onSnapshot(
     doc(db, 'users', uid),
     (snap) => alCambiar(snap.exists() ? (snap.data() as Perfil) : null),
-    (error) => console.error('Error escuchando perfil', error),
+    (error) => {
+      console.error('Error escuchando perfil', error);
+      alFallar?.(error);
+    },
   );
 }
 
