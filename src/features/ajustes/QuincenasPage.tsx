@@ -11,7 +11,7 @@ import { useUsuario } from '../auth/contexto';
 
 export function QuincenasPage() {
   const usuario = useUsuario();
-  const { datos: perfil, cargando } = usePerfil(usuario.uid);
+  const { datos: perfil, cargando, error } = usePerfil(usuario.uid);
 
   return (
     <div className="space-y-4">
@@ -20,7 +20,16 @@ export function QuincenasPage() {
         Ajustes
       </Link>
       <h2 className="text-lg font-semibold text-slate-900">Quincenas y moneda</h2>
-      {cargando ? <p className="py-6 text-center text-slate-400">Cargando…</p> : <Formulario key={usuario.uid} perfil={perfil} />}
+      {cargando ? (
+        <p className="py-6 text-center text-slate-400">Cargando…</p>
+      ) : error ? (
+        // Sin el perfil real no se muestra el formulario: guardar los valores por defecto sobrescribiría tus ajustes.
+        <p role="alert" className="rounded-2xl bg-rose-50 p-4 text-center text-sm text-rose-700">
+          No se pudieron cargar tus ajustes. Revisa tu conexión e intenta de nuevo.
+        </p>
+      ) : (
+        <Formulario key={usuario.uid} perfil={perfil} />
+      )}
     </div>
   );
 }
