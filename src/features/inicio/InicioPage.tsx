@@ -1,31 +1,46 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { FilaMovimiento } from '../../components/FilaMovimiento';
-import { useCategorias, useMovimientosEntre, usePerfil } from '../../data/hooks';
+import { useCategorias, useFijos, useMovimientosEntre, usePerfil } from '../../data/hooks';
 import { formatearMonto } from '../../domain/dinero';
+import { comprometido, pendientesDeQuincena, type Pendiente } from '../../domain/fijos';
 import type { Movimiento } from '../../domain/movimientos';
 import { resumenQuincena } from '../../domain/presupuesto';
 import { DIAS_PAGO_POR_DEFECTO, etiquetaQuincena, quincenaDe } from '../../domain/quincena';
 import { useUsuario } from '../auth/contexto';
-import { RegistroRapido } from '../movimientos/RegistroRapido';
+import { RegistroRapido, type Prellenado } from '../movimientos/RegistroRapido';
+import { FijosQuincena } from './FijosQuincena';
 import { GastoPorCategoria } from './GastoPorCategoria';
 
 const CANTIDAD_ULTIMOS = 5;
 
+type Hoja = { movimiento: Movimiento } | { prellenado: Prellenado } | null;
+
 export function InicioPage() {
   const usuario = useUsuario();
-  const [editando, setEditando] = useState<Movimiento | undefined>();
+  const [hoja, setHoja] = useState<Hoja>(null);
 
   const { datos: perfil } = usePerfil(usuario.uid);
   const moneda = perfil?.moneda ?? 'COP';
   const quincena = quincenaDe(new Date(), perfil?.diasPago ?? DIAS_PAGO_POR_DEFECTO);
   const { datos: movimientos, cargando, error } = useMovimientosEntre(usuario.uid, quincena.desde, quincena.hasta);
   const { datos: categorias } = useCategorias(usuario.uid);
+  const fijos = useFijos(usuario.uid);
 
   const porId = new Map(categorias.map((c) => [c.id, c]));
-  const resumen = resumenQuincena(movimientos);
+  const pendientes = pendientesDeQuincena(fijos.datos, quincena, movimientos);
+  const resumen = resumenQuincena(movimientos, comprometido(pendientes));
   const ultimos = movimientos.slice(0, CANTIDAD_ULTIMOS);
   const nombre = (perfil?.nombre || usuario.displayName || '').split(' ')[0];
+
+  function pagar(p: Pendiente) {
+    setHoja({ prellenado: { monto: p.planeado, categoriaId: p.categoriaId, nota: p.nombre, origen: p.origen } });
+  }
+
+  function abrirPago(movimientoId: string) {
+    const encontrado = movimientos.find((m) => m.id === movimientoId);
+    if (encontrado) setHoja({ movimiento: encontrado });
+  }
 
   return (
     <div className="space-y-5">
@@ -35,14 +50,18 @@ export function InicioPage() {
         <p className="text-sm opacity-80">Quincena actual · {etiquetaQuincena(quincena)}</p>
         <p className="mt-3 text-sm opacity-80">Disponible</p>
         <p className="text-3xl font-bold tabular-nums">{formatearMonto(resumen.disponible, moneda)}</p>
-        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <div>
+        <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
+          <div className="min-w-0">
             <p className="opacity-80">Ingresos</p>
-            <p className="font-semibold tabular-nums">{formatearMonto(resumen.ingresos, moneda)}</p>
+            <p className="truncate font-semibold tabular-nums">{formatearMonto(resumen.ingresos, moneda)}</p>
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="opacity-80">Gastado</p>
-            <p className="font-semibold tabular-nums">{formatearMonto(resumen.gastado, moneda)}</p>
+            <p className="truncate font-semibold tabular-nums">{formatearMonto(resumen.gastado, moneda)}</p>
+          </div>
+          <div className="min-w-0">
+            <p className="opacity-80">Comprometido</p>
+            <p className="truncate font-semibold tabular-nums">{formatearMonto(resumen.comprometido, moneda)}</p>
           </div>
         </div>
       </section>
@@ -52,6 +71,16 @@ export function InicioPage() {
           No se pudieron cargar tus movimientos. Revisa tu conexión.
         </p>
       )}
+
+      <FijosQuincena
+        pendientes={pendientes}
+        categorias={porId}
+        moneda={moneda}
+        cargando={fijos.cargando || cargando}
+        error={fijos.error}
+        onPagar={pagar}
+        onAbrirPago={abrirPago}
+      />
 
       <section>
         <h2 className="mb-2 font-semibold text-slate-900">¿En qué se fue?</h2>
@@ -80,13 +109,24 @@ export function InicioPage() {
         ) : (
           <div className="rounded-2xl bg-white p-1 shadow-sm">
             {ultimos.map((m) => (
-              <FilaMovimiento key={m.id} movimiento={m} categoria={porId.get(m.categoriaId)} moneda={moneda} onClick={() => setEditando(m)} />
+              <FilaMovimiento
+                key={m.id}
+                movimiento={m}
+                categoria={porId.get(m.categoriaId)}
+                moneda={moneda}
+                onClick={() => setHoja({ movimiento: m })}
+              />
             ))}
           </div>
         )}
       </section>
 
-      <RegistroRapido abierta={editando !== undefined} movimiento={editando} onCerrar={() => setEditando(undefined)} />
+      <RegistroRapido
+        abierta={hoja !== null}
+        movimiento={hoja && 'movimiento' in hoja ? hoja.movimiento : undefined}
+        prellenado={hoja && 'prellenado' in hoja ? hoja.prellenado : undefined}
+        onCerrar={() => setHoja(null)}
+      />
     </div>
   );
 }
