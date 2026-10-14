@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router';
 import { Layout } from './components/Layout';
 import { AjustesPage } from './features/ajustes/AjustesPage';
 import { CategoriasPage } from './features/ajustes/CategoriasPage';
+import { FijosPage } from './features/ajustes/FijosPage';
 import { QuincenasPage } from './features/ajustes/QuincenasPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { useAuth } from './features/auth/contexto';
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="ajustes" element={<AjustesPage />} />
         <Route path="ajustes/quincenas" element={<QuincenasPage />} />
         <Route path="ajustes/categorias" element={<CategoriasPage />} />
+        <Route path="ajustes/fijos" element={<FijosPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

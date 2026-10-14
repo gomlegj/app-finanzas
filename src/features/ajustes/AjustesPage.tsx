@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { CalendarDays, ChevronRight, LogOut, Tags, UserRound } from 'lucide-react';
+import { CalendarDays, ChevronRight, LogOut, Repeat, Tags, UserRound } from 'lucide-react';
 import { useToast } from '../../components/toastContexto';
 import { salir } from '../auth/acciones';
 import { useUsuario } from '../auth/contexto';
@@ -33,6 +33,11 @@ export function AjustesPage() {
         <Link to="/ajustes/categorias" className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-slate-50">
           <Tags size={20} className="text-emerald-600" />
           <span className="flex-1 font-medium text-slate-800">Categorías</span>
+          <ChevronRight size={18} className="text-slate-400" />
+        </Link>
+        <Link to="/ajustes/fijos" className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-slate-50">
+          <Repeat size={20} className="text-emerald-600" />
+          <span className="flex-1 font-medium text-slate-800">Gastos fijos</span>
           <ChevronRight size={18} className="text-slate-400" />
         </Link>
       </div>
