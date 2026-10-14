@@ -43,17 +43,44 @@ service cloud.firestore {
       }
 
       match /movimientos/{id} {
+        function origenValido(d) {
+          return !('origen' in d) || (
+            d.origen is map
+            && d.origen.keys().hasOnly(['tipo', 'id'])
+            && d.origen.tipo in ['fijo', 'deuda', 'meta']
+            && d.origen.id is string && d.origen.id.size() > 0);
+        }
+
         function movimientoValido() {
           let d = request.resource.data;
           return d.tipo in ['gasto', 'ingreso']
             && d.monto is int && d.monto > 0
             && d.categoriaId is string && d.categoriaId.size() > 0
             && d.fecha is string && d.fecha.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-            && (!('nota' in d) || (d.nota is string && d.nota.size() <= 200));
+            && (!('nota' in d) || (d.nota is string && d.nota.size() <= 200))
+            && origenValido(d);
         }
 
         allow read, delete: if esDueno(uid);
-        allow create, update: if esDueno(uid) && movimientoValido();
+        allow create: if esDueno(uid) && movimientoValido();
+        // El origen une el pago con su fijo/deuda/meta: no se cambia al editar.
+        allow update: if esDueno(uid) && movimientoValido()
+          && request.resource.data.get('origen', null) == resource.data.get('origen', null);
+      }
+
+      match /fijos/{id} {
+        function fijoValido() {
+          let d = request.resource.data;
+          return d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 40
+            && d.monto is int && d.monto > 0
+            && d.categoriaId is string && d.categoriaId.size() > 0
+            && d.activo is bool
+            && ((d.frecuencia == 'mensual' && 'quincena' in d && d.quincena is int && d.quincena in [1, 2])
+              || (d.frecuencia == 'quincenal' && !('quincena' in d)));
+        }
+
+        allow read, delete: if esDueno(uid);
+        allow create, update: if esDueno(uid) && fijoValido();
       }
     }
   }

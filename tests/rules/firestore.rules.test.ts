@@ -5,7 +5,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, deleteField, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import { MONEDAS_DISPONIBLES } from '../../src/domain/dinero';
 
@@ -138,7 +138,7 @@ describe('categorías', () => {
 });
 
 describe('colecciones de fases futuras', () => {
-  it.each(['fijos', 'metas', 'deudas'])('rechaza escribir en %s', async (coleccion) => {
+  it.each(['metas', 'deudas'])('rechaza escribir en %s', async (coleccion) => {
     await assertFails(setDoc(doc(como(ALICIA), `users/${ALICIA}/${coleccion}/x`), { nombre: 'x' }));
   });
 });
@@ -169,5 +169,89 @@ describe('perfil validado', () => {
     ['pagos separados 1 día', { diasPago: [15, 16] }],
   ])('rechaza %s', async (_n, cambio) => {
     await assertFails(setDoc(perfil(ALICIA), { ...base, ...cambio }));
+  });
+});
+
+describe('fijos', () => {
+  const ruta = (uid: string, id = 'f1') => `users/${uid}/fijos/${id}`;
+  const mensual = { nombre: 'Arriendo', monto: 900000, categoriaId: 'arriendo', frecuencia: 'mensual', quincena: 1, activo: true };
+  const quincenal = { nombre: 'Mercado', monto: 300000, categoriaId: 'comida', frecuencia: 'quincenal', activo: true };
+
+  it('crea fijos mensuales (Q1 y Q2) y quincenales', async () => {
+    await assertSucceeds(setDoc(doc(como(ALICIA), ruta(ALICIA, 'a')), mensual));
+    await assertSucceeds(setDoc(doc(como(ALICIA), ruta(ALICIA, 'b')), { ...mensual, quincena: 2 }));
+    await assertSucceeds(setDoc(doc(como(ALICIA), ruta(ALICIA, 'c')), quincenal));
+  });
+
+  it.each([
+    ['nombre vacío', { nombre: '' }],
+    ['nombre de 41 caracteres', { nombre: 'x'.repeat(41) }],
+    ['monto 0', { monto: 0 }],
+    ['monto decimal', { monto: 1.5 }],
+    ['sin categoría', { categoriaId: '' }],
+    ['frecuencia inválida', { frecuencia: 'anual' }],
+    ['quincena 3', { quincena: 3 }],
+    ['activo como texto', { activo: 'si' }],
+  ])('rechaza mensual con %s', async (_n, cambio) => {
+    await assertFails(setDoc(doc(como(ALICIA), ruta(ALICIA)), { ...mensual, ...cambio }));
+  });
+
+  it('rechaza mensual sin quincena y quincenal con quincena', async () => {
+    const sinQuincena = { nombre: 'Arriendo', monto: 900000, categoriaId: 'arriendo', frecuencia: 'mensual', activo: true };
+    await assertFails(setDoc(doc(como(ALICIA), ruta(ALICIA)), sinQuincena));
+    await assertFails(setDoc(doc(como(ALICIA), ruta(ALICIA)), { ...quincenal, quincena: 1 }));
+  });
+
+  it('pasa de mensual a quincenal solo si borra la quincena', async () => {
+    await sembrar(ruta(ALICIA), mensual);
+    await assertFails(updateDoc(doc(como(ALICIA), ruta(ALICIA)), { frecuencia: 'quincenal' }));
+    await assertSucceeds(updateDoc(doc(como(ALICIA), ruta(ALICIA)), { frecuencia: 'quincenal', quincena: deleteField() }));
+  });
+
+  it('la dueña pausa y borra', async () => {
+    await sembrar(ruta(ALICIA), mensual);
+    await assertSucceeds(updateDoc(doc(como(ALICIA), ruta(ALICIA)), { activo: false }));
+    await assertSucceeds(deleteDoc(doc(como(ALICIA), ruta(ALICIA))));
+  });
+
+  it('otro usuario no lee, crea ni borra fijos ajenos', async () => {
+    await sembrar(ruta(ALICIA), mensual);
+    await assertFails(getDoc(doc(como(BETO), ruta(ALICIA))));
+    await assertFails(setDoc(doc(como(BETO), ruta(ALICIA, 'f9')), mensual));
+    await assertFails(deleteDoc(doc(como(BETO), ruta(ALICIA))));
+  });
+});
+
+describe('origen de movimientos', () => {
+  const ruta = (id = 'm1') => `users/${ALICIA}/movimientos/${id}`;
+  const conOrigen = { ...movimiento, origen: { tipo: 'fijo', id: 'f1' } };
+
+  it('acepta origen fijo, deuda o meta', async () => {
+    for (const tipo of ['fijo', 'deuda', 'meta']) {
+      await assertSucceeds(setDoc(doc(como(ALICIA), ruta(tipo)), { ...movimiento, origen: { tipo, id: 'x' } }));
+    }
+  });
+
+  it.each([
+    ['tipo inválido', { tipo: 'otro', id: 'f1' }],
+    ['id vacío', { tipo: 'fijo', id: '' }],
+    ['sin id', { tipo: 'fijo' }],
+    ['campos de más', { tipo: 'fijo', id: 'f1', extra: true }],
+    ['texto en vez de mapa', 'fijo:f1'],
+  ])('rechaza origen con %s', async (_n, origen) => {
+    await assertFails(setDoc(doc(como(ALICIA), ruta()), { ...movimiento, origen }));
+  });
+
+  it('editar monto o nota conserva el origen', async () => {
+    await sembrar(ruta(), conOrigen);
+    await assertSucceeds(updateDoc(doc(como(ALICIA), ruta()), { monto: 99000, nota: 'subió' }));
+  });
+
+  it('no permite cambiar, quitar ni agregar el origen al editar', async () => {
+    await sembrar(ruta(), conOrigen);
+    await assertFails(updateDoc(doc(como(ALICIA), ruta()), { origen: { tipo: 'fijo', id: 'f2' } }));
+    await assertFails(updateDoc(doc(como(ALICIA), ruta()), { origen: deleteField() }));
+    await sembrar(ruta('m2'), movimiento);
+    await assertFails(updateDoc(doc(como(ALICIA), ruta('m2')), { origen: { tipo: 'fijo', id: 'f1' } }));
   });
 });
