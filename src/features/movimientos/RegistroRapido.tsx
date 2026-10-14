@@ -16,34 +16,56 @@ import {
   validarMovimiento,
   type ErroresMovimiento,
   type Movimiento,
+  type OrigenMovimiento,
   type TipoMovimiento,
 } from '../../domain/movimientos';
 import { useUsuario } from '../auth/contexto';
+
+export interface Prellenado {
+  monto: number;
+  categoriaId: string;
+  nota: string;
+  origen: OrigenMovimiento;
+}
 
 interface Props {
   abierta: boolean;
   onCerrar: () => void;
   movimiento?: Movimiento;
+  /** Para registrar el pago de un pendiente (fijo, y luego deuda o meta). Se ignora si hay `movimiento`. */
+  prellenado?: Prellenado;
 }
 
-export function RegistroRapido({ abierta, onCerrar, movimiento }: Props) {
+export function RegistroRapido({ abierta, onCerrar, movimiento, prellenado }: Props) {
+  const pago = movimiento ? undefined : prellenado;
+  const titulo = movimiento ? 'Editar movimiento' : pago ? 'Registrar pago' : 'Nuevo movimiento';
+  const clave = movimiento?.id ?? (pago ? `pago:${pago.origen.id}` : 'nuevo');
   return (
-    <HojaInferior abierta={abierta} onCerrar={onCerrar} titulo={movimiento ? 'Editar movimiento' : 'Nuevo movimiento'}>
-      <FormularioMovimiento key={movimiento?.id ?? 'nuevo'} movimiento={movimiento} onListo={onCerrar} />
+    <HojaInferior abierta={abierta} onCerrar={onCerrar} titulo={titulo}>
+      <FormularioMovimiento key={clave} movimiento={movimiento} prellenado={pago} onListo={onCerrar} />
     </HojaInferior>
   );
 }
 
-function FormularioMovimiento({ movimiento, onListo }: { movimiento?: Movimiento; onListo: () => void }) {
+function FormularioMovimiento({
+  movimiento,
+  prellenado,
+  onListo,
+}: {
+  movimiento?: Movimiento;
+  prellenado?: Prellenado;
+  onListo: () => void;
+}) {
   const usuario = useUsuario();
   const { mostrar } = useToast();
   const { datos: categorias } = useCategorias(usuario.uid);
 
+  const montoInicial = movimiento?.monto ?? prellenado?.monto;
   const [tipo, setTipo] = useState<TipoMovimiento>(movimiento?.tipo ?? 'gasto');
-  const [montoTexto, setMontoTexto] = useState(movimiento ? agruparMiles(String(movimiento.monto)) : '');
-  const [categoriaId, setCategoriaId] = useState(movimiento?.categoriaId ?? '');
+  const [montoTexto, setMontoTexto] = useState(montoInicial ? agruparMiles(String(montoInicial)) : '');
+  const [categoriaId, setCategoriaId] = useState(movimiento?.categoriaId ?? prellenado?.categoriaId ?? '');
   const [fecha, setFecha] = useState(movimiento?.fecha ?? fechaLocalISO());
-  const [nota, setNota] = useState(movimiento?.nota ?? '');
+  const [nota, setNota] = useState(movimiento?.nota ?? prellenado?.nota ?? '');
   const [errores, setErrores] = useState<ErroresMovimiento>({});
 
   // Al editar, la categoría actual se muestra aunque esté archivada.
@@ -66,7 +88,7 @@ function FormularioMovimiento({ movimiento, onListo }: { movimiento?: Movimiento
     const datos = normalizarMovimiento(formulario);
     const operacion = movimiento
       ? actualizarMovimiento(usuario.uid, movimiento.id, datos)
-      : crearMovimiento(usuario.uid, datos);
+      : crearMovimiento(usuario.uid, datos, prellenado?.origen);
     // No se espera: sin conexión la promesa solo se resuelve al sincronizar.
     operacion.catch(() => mostrar('No se pudo guardar el movimiento', 'error'));
     mostrar(movimiento ? 'Movimiento actualizado' : 'Movimiento guardado');
@@ -82,7 +104,8 @@ function FormularioMovimiento({ movimiento, onListo }: { movimiento?: Movimiento
 
   return (
     <form onSubmit={guardar} className="space-y-5" noValidate>
-      <SelectorTipo valor={tipo} onCambio={cambiarTipo} />
+      {/* Un pago siempre es gasto: cambiarlo a ingreso rompería planeado vs real. */}
+      {!prellenado && <SelectorTipo valor={tipo} onCambio={cambiarTipo} />}
 
       <div>
         <label htmlFor="monto" className="sr-only">
