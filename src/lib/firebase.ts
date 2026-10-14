@@ -25,6 +25,8 @@ export const db = initializeFirestore(app, {
 export const proveedorGoogle = new GoogleAuthProvider();
 
 if (import.meta.env.VITE_USE_EMULATORS === 'true') {
-  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-  connectFirestoreEmulator(db, '127.0.0.1', 8080);
+  // Mismo host desde el que se abrió la app: así funciona desde el celular por WiFi (IP de la PC).
+  const host = window.location.hostname;
+  connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
+  connectFirestoreEmulator(db, host, 8080);
 }
