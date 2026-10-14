@@ -86,7 +86,8 @@ export function pendientesDeQuincena(
 ): Pendiente[] {
   const pagos = new Map<string, Movimiento[]>();
   for (const m of movimientos) {
-    if (m.origen?.tipo !== 'fijo') continue;
+    // Un pago siempre es gasto; si se editó a ingreso deja de contar como pago.
+    if (m.tipo !== 'gasto' || m.origen?.tipo !== 'fijo') continue;
     const lista = pagos.get(m.origen.id);
     if (lista) lista.push(m);
     else pagos.set(m.origen.id, [m]);

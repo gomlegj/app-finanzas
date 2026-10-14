@@ -77,7 +77,8 @@ export function InicioPage() {
         categorias={porId}
         moneda={moneda}
         cargando={fijos.cargando || cargando}
-        error={fijos.error}
+        // Sin movimientos no se sabe qué está pagado: mostrar "Pagado" invitaría a pagar dos veces.
+        error={fijos.error || error}
         onPagar={pagar}
         onAbrirPago={abrirPago}
       />

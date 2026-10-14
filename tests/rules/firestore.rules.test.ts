@@ -242,6 +242,12 @@ describe('origen de movimientos', () => {
     await assertFails(setDoc(doc(como(ALICIA), ruta()), { ...movimiento, origen }));
   });
 
+  it('un movimiento con origen siempre es gasto', async () => {
+    await assertFails(setDoc(doc(como(ALICIA), ruta()), { ...conOrigen, tipo: 'ingreso' }));
+    await sembrar(ruta('m2'), conOrigen);
+    await assertFails(updateDoc(doc(como(ALICIA), ruta('m2')), { tipo: 'ingreso', categoriaId: 'salario' }));
+  });
+
   it('editar monto o nota conserva el origen', async () => {
     await sembrar(ruta(), conOrigen);
     await assertSucceeds(updateDoc(doc(como(ALICIA), ruta()), { monto: 99000, nota: 'subió' }));

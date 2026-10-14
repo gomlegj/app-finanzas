@@ -44,8 +44,10 @@ service cloud.firestore {
 
       match /movimientos/{id} {
         function origenValido(d) {
+          // Un pago (de fijo, deuda o meta) siempre es gasto.
           return !('origen' in d) || (
-            d.origen is map
+            d.tipo == 'gasto'
+            && d.origen is map
             && d.origen.keys().hasOnly(['tipo', 'id'])
             && d.origen.tipo in ['fijo', 'deuda', 'meta']
             && d.origen.id is string && d.origen.id.size() > 0);

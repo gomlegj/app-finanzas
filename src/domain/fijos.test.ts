@@ -149,6 +149,11 @@ describe('pendientesDeQuincena', () => {
     expect(pendientesDeQuincena([fijo('luz')], Q1, movimientos)[0].pagado).toBeUndefined();
   });
 
+  it('un pago convertido en ingreso no cuenta como pagado', () => {
+    const movimientos = [pago('m1', 'luz', 1000, '2026-10-20', { tipo: 'ingreso' })];
+    expect(pendientesDeQuincena([fijo('luz')], Q1, movimientos)[0].pagado).toBeUndefined();
+  });
+
   it('un fijo pausado aparece si ya se pagó y desaparece si no', () => {
     const fijos = [fijo('pagado', { activo: false }), fijo('sinpagar', { activo: false })];
     const lista = pendientesDeQuincena(fijos, Q1, [pago('m1', 'pagado', 1000)]);

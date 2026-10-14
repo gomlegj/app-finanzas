@@ -105,7 +105,7 @@ function FormularioMovimiento({
   return (
     <form onSubmit={guardar} className="space-y-5" noValidate>
       {/* Un pago siempre es gasto: cambiarlo a ingreso rompería planeado vs real. */}
-      {!prellenado && <SelectorTipo valor={tipo} onCambio={cambiarTipo} />}
+      {!prellenado && !movimiento?.origen && <SelectorTipo valor={tipo} onCambio={cambiarTipo} />}
 
       <div>
         <label htmlFor="monto" className="sr-only">
