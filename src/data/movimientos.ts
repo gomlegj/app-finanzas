@@ -12,7 +12,7 @@ import {
   where,
   type Unsubscribe,
 } from 'firebase/firestore';
-import type { DatosMovimiento, Movimiento } from '../domain/movimientos';
+import type { DatosMovimiento, Movimiento, OrigenMovimiento } from '../domain/movimientos';
 import { db } from '../lib/firebase';
 
 const coleccion = (uid: string) => collection(db, 'users', uid, 'movimientos');
@@ -40,8 +40,8 @@ export function escucharMovimientosEntre(
   );
 }
 
-export async function crearMovimiento(uid: string, datos: DatosMovimiento): Promise<void> {
-  await addDoc(coleccion(uid), { ...datos, creadoEn: serverTimestamp() });
+export async function crearMovimiento(uid: string, datos: DatosMovimiento, origen?: OrigenMovimiento): Promise<void> {
+  await addDoc(coleccion(uid), { ...datos, ...(origen ? { origen } : {}), creadoEn: serverTimestamp() });
 }
 
 export function actualizarMovimiento(uid: string, id: string, datos: DatosMovimiento): Promise<void> {

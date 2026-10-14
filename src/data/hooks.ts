@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { Unsubscribe } from 'firebase/firestore';
 import type { Categoria } from '../domain/categorias';
+import type { Fijo } from '../domain/fijos';
 import type { Movimiento } from '../domain/movimientos';
 import { escucharCategorias } from './categorias';
+import { escucharFijos } from './fijos';
 import { escucharMovimientosEntre } from './movimientos';
 import { escucharPerfil, type Perfil } from './usuario';
 
@@ -47,4 +49,8 @@ export function useMovimientosEntre(uid: string, desde: string, hasta: string): 
     `movimientos:${uid}:${desde}:${hasta}`,
     SIN_DATOS,
   );
+}
+
+export function useFijos(uid: string): Escucha<Fijo[]> {
+  return useEscucha<Fijo[]>((cb, falla) => escucharFijos(uid, cb, falla), `fijos:${uid}`, SIN_DATOS);
 }
