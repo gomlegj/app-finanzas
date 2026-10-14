@@ -1,3 +1,6 @@
+import type { Movimiento } from './movimientos';
+import type { Quincena } from './quincena';
+
 export type Frecuencia = 'mensual' | 'quincenal';
 export type NumeroQuincena = 1 | 2;
 
@@ -64,4 +67,56 @@ export const porNombre = (a: { nombre: string }, b: { nombre: string }) => a.nom
 
 export function ordenarFijos(fijos: readonly Fijo[]): Fijo[] {
   return [...fijos].sort((a, b) => Number(b.activo) - Number(a.activo) || porNombre(a, b));
+}
+
+export interface Pendiente {
+  origen: { tipo: 'fijo'; id: string };
+  nombre: string;
+  categoriaId: string;
+  planeado: number;
+  /** Ausente si no está pagado. `movimientos`: ids del más reciente al más antiguo. */
+  pagado?: { monto: number; movimientos: string[] };
+}
+
+/** `movimientos` deben ser solo los de `quincena`. */
+export function pendientesDeQuincena(
+  fijos: readonly Fijo[],
+  quincena: Pick<Quincena, 'numero'>,
+  movimientos: readonly Movimiento[],
+): Pendiente[] {
+  const pagos = new Map<string, Movimiento[]>();
+  for (const m of movimientos) {
+    if (m.origen?.tipo !== 'fijo') continue;
+    const lista = pagos.get(m.origen.id);
+    if (lista) lista.push(m);
+    else pagos.set(m.origen.id, [m]);
+  }
+
+  const resultado: Pendiente[] = [];
+  for (const fijo of fijos) {
+    if (!aplicaEnQuincena(fijo, quincena.numero)) continue;
+    const lista = pagos.get(fijo.id);
+    // Pausado y sin pagar: ya no se espera. Pausado pero pagado: se conserva lo ocurrido.
+    if (!fijo.activo && !lista) continue;
+    const pendiente: Pendiente = {
+      origen: { tipo: 'fijo', id: fijo.id },
+      nombre: fijo.nombre,
+      categoriaId: fijo.categoriaId,
+      planeado: fijo.monto,
+    };
+    if (lista) {
+      const recientes = [...lista].sort((a, b) => b.fecha.localeCompare(a.fecha));
+      pendiente.pagado = {
+        monto: lista.reduce((suma, m) => suma + m.monto, 0),
+        movimientos: recientes.map((m) => m.id),
+      };
+    }
+    resultado.push(pendiente);
+  }
+
+  return resultado.sort((a, b) => Number(a.pagado !== undefined) - Number(b.pagado !== undefined) || porNombre(a, b));
+}
+
+export function comprometido(pendientes: readonly Pendiente[]): number {
+  return pendientes.reduce((suma, p) => (p.pagado ? suma : suma + p.planeado), 0);
 }
