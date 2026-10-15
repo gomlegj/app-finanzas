@@ -1,4 +1,5 @@
 import type { Movimiento } from './movimientos';
+import { desplazarQuincena, type DiasPago, type Quincena } from './quincena';
 
 export type ModoMeta = 'fecha' | 'cuota';
 
@@ -86,4 +87,34 @@ export function progreso(meta: Pick<Meta, 'objetivo'>, ahorradoActual: number): 
 
 export function cumplida(meta: Pick<Meta, 'objetivo'>, ahorradoActual: number): boolean {
   return ahorradoActual >= meta.objetivo;
+}
+
+/** Quincenas desde la actual (incluida) hasta la que contiene `fecha` (incluida); mínimo 1. */
+function quincenasHasta(quincena: Quincena, fecha: string, diasPago: DiasPago): number {
+  let cuenta = 1;
+  let actual = quincena;
+  while (actual.hasta < fecha) {
+    actual = desplazarQuincena(actual, 1, diasPago);
+    cuenta++;
+  }
+  return cuenta;
+}
+
+type MetaCalculable = Pick<DatosMetaEditable, 'objetivo' | 'modo' | 'fechaObjetivo' | 'cuotaQuincenal'>;
+
+/** Cuánto toca abonar en `quincena`, con lo ahorrado al inicio de esa quincena. */
+export function cuotaDeQuincena(meta: MetaCalculable, ahorradoAlInicio: number, quincena: Quincena, diasPago: DiasPago): number {
+  const faltante = Math.max(0, meta.objetivo - ahorradoAlInicio);
+  if (faltante === 0) return 0;
+  if (meta.modo === 'cuota') return Math.min(meta.cuotaQuincenal ?? faltante, faltante);
+  const restantes = meta.fechaObjetivo ? quincenasHasta(quincena, meta.fechaObjetivo, diasPago) : 1;
+  return Math.ceil(faltante / restantes);
+}
+
+/** Modo cuota: fin de la quincena en que se completa la meta al ritmo de la cuota. */
+export function fechaEstimada(meta: MetaCalculable, ahorradoAlInicio: number, quincena: Quincena, diasPago: DiasPago): string | null {
+  const faltante = Math.max(0, meta.objetivo - ahorradoAlInicio);
+  if (meta.modo !== 'cuota' || !meta.cuotaQuincenal || faltante === 0) return null;
+  const quincenas = Math.ceil(faltante / meta.cuotaQuincenal);
+  return desplazarQuincena(quincena, quincenas - 1, diasPago).hasta;
 }

@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { ahorrado, cumplida, normalizarMeta, progreso, validarMeta, type FormularioMeta, type Meta } from './metas';
+import {
+  ahorrado,
+  cuotaDeQuincena,
+  cumplida,
+  fechaEstimada,
+  normalizarMeta,
+  progreso,
+  validarMeta,
+  type FormularioMeta,
+  type Meta,
+} from './metas';
 import type { Movimiento } from './movimientos';
+import { quincenaDe } from './quincena';
 
 const HOY = { hoy: '2026-10-15', creando: true };
 
@@ -116,5 +127,55 @@ describe('progreso y cumplida', () => {
   it('cumplida cuando lo ahorrado llega al objetivo', () => {
     expect(cumplida(meta('a'), 999999)).toBe(false);
     expect(cumplida(meta('a'), 1000000)).toBe(true);
+  });
+});
+
+const DIAS: [number, number] = [15, 30];
+const Q_OCT = quincenaDe('2026-10-15', DIAS); // 15 oct → 29 oct
+
+describe('cuotaDeQuincena', () => {
+  it('modo cuota: la cuota, pero nunca más de lo que falta', () => {
+    const m = meta('a', { objetivo: 1000000, cuotaQuincenal: 150000 });
+    expect(cuotaDeQuincena(m, 0, Q_OCT, DIAS)).toBe(150000);
+    expect(cuotaDeQuincena(m, 900000, Q_OCT, DIAS)).toBe(100000);
+    expect(cuotaDeQuincena(m, 1000000, Q_OCT, DIAS)).toBe(0);
+  });
+
+  it('modo fecha: reparte lo que falta entre las quincenas restantes, cruzando de año', () => {
+    // 15–29 oct, 30 oct–14 nov, 15–29 nov, 30 nov–14 dic, 15–29 dic, 30 dic–14 ene (contiene 31 dic) → 6
+    const m = meta('a', { modo: 'fecha', cuotaQuincenal: undefined, fechaObjetivo: '2026-12-31', objetivo: 600000 });
+    expect(cuotaDeQuincena(m, 0, Q_OCT, DIAS)).toBe(100000);
+  });
+
+  it('modo fecha redondea hacia arriba', () => {
+    const m = meta('a', { modo: 'fecha', cuotaQuincenal: undefined, fechaObjetivo: '2026-11-10', objetivo: 100001 });
+    expect(cuotaDeQuincena(m, 0, Q_OCT, DIAS)).toBe(50001);
+  });
+
+  it('modo fecha en febrero (pago del 30 cae el 28)', () => {
+    const qFeb = quincenaDe('2026-02-20', DIAS); // 15 feb → 27 feb
+    const m = meta('a', { modo: 'fecha', cuotaQuincenal: undefined, fechaObjetivo: '2026-03-10', objetivo: 200000 });
+    expect(cuotaDeQuincena(m, 0, qFeb, DIAS)).toBe(100000);
+  });
+
+  it('si la fecha cae en la quincena actual o ya pasó, toca todo lo que falta', () => {
+    const enEsta = meta('a', { modo: 'fecha', cuotaQuincenal: undefined, fechaObjetivo: '2026-10-20', objetivo: 500000 });
+    const vencida = meta('b', { modo: 'fecha', cuotaQuincenal: undefined, fechaObjetivo: '2026-09-01', objetivo: 500000 });
+    expect(cuotaDeQuincena(enEsta, 100000, Q_OCT, DIAS)).toBe(400000);
+    expect(cuotaDeQuincena(vencida, 100000, Q_OCT, DIAS)).toBe(400000);
+  });
+});
+
+describe('fechaEstimada', () => {
+  it('modo cuota: fin de la quincena en que se llega', () => {
+    const m = meta('a', { objetivo: 600000, cuotaQuincenal: 150000 });
+    expect(fechaEstimada(m, 0, Q_OCT, DIAS)).toBe('2026-12-14'); // 4 quincenas
+    expect(fechaEstimada(m, 500000, Q_OCT, DIAS)).toBe('2026-10-29'); // falta 100.000 → esta misma
+  });
+
+  it('sin faltante o en modo fecha no hay fecha estimada', () => {
+    expect(fechaEstimada(meta('a', { objetivo: 600000 }), 600000, Q_OCT, DIAS)).toBeNull();
+    const porFecha = meta('b', { modo: 'fecha', cuotaQuincenal: undefined, fechaObjetivo: '2027-01-01' });
+    expect(fechaEstimada(porFecha, 0, Q_OCT, DIAS)).toBeNull();
   });
 });

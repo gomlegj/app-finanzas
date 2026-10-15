@@ -48,3 +48,7 @@ export function fechaCorta(iso: string): string {
   const fecha = parseISO(iso);
   return `${fecha.getDate()} ${MESES_CORTOS[fecha.getMonth()]}`;
 }
+
+export function fechaConAnio(iso: string): string {
+  return `${fechaCorta(iso)} ${parseISO(iso).getFullYear()}`;
+}
