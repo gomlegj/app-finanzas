@@ -4,6 +4,7 @@ import { BurbujaCategoria } from '../../components/BurbujaCategoria';
 import { MensajeError } from '../../components/MensajeError';
 import { useToast } from '../../components/toastContexto';
 import { actualizarFijo, borrarFijo, crearFijo } from '../../data/fijos';
+import { diasRecordatorio, enlaceCalendario } from '../../domain/calendario';
 import { categoriasActivas, type Categoria } from '../../domain/categorias';
 import { actualizarTextoMonto, agruparMiles, parsearMonto } from '../../domain/dinero';
 import {
@@ -15,15 +16,18 @@ import {
   type Frecuencia,
   type NumeroQuincena,
 } from '../../domain/fijos';
+import type { DiasPago } from '../../domain/quincena';
 import { useUsuario } from '../auth/contexto';
 
 interface Props {
   fijo?: Fijo;
   categorias: readonly Categoria[];
+  diasPago: DiasPago;
+  moneda: string;
   onListo: () => void;
 }
 
-export function FormularioFijo({ fijo, categorias, onListo }: Props) {
+export function FormularioFijo({ fijo, categorias, diasPago, moneda, onListo }: Props) {
   const usuario = useUsuario();
   const { mostrar } = useToast();
   const [nombre, setNombre] = useState(fijo?.nombre ?? '');
@@ -31,6 +35,7 @@ export function FormularioFijo({ fijo, categorias, onListo }: Props) {
   const [categoriaId, setCategoriaId] = useState(fijo?.categoriaId ?? '');
   const [frecuencia, setFrecuencia] = useState<Frecuencia>(fijo?.frecuencia ?? 'mensual');
   const [quincena, setQuincena] = useState<NumeroQuincena>(fijo?.quincena ?? 1);
+  const [diaTexto, setDiaTexto] = useState(fijo?.diaPago ? String(fijo.diaPago) : '');
   const [activo, setActivo] = useState(fijo?.activo ?? true);
   const [errores, setErrores] = useState<ErroresFijo>({});
 
@@ -39,9 +44,13 @@ export function FormularioFijo({ fijo, categorias, onListo }: Props) {
   const opciones = categoriasActivas(categorias, 'gasto');
   if (actual?.archivada && actual.tipo === 'gasto') opciones.push(actual);
 
+  // El evento se arma con lo guardado, no con cambios sin guardar.
+  const diasCalendario = fijo ? diasRecordatorio(fijo, diasPago) : null;
+
   function guardar(e: FormEvent) {
     e.preventDefault();
-    const formulario = { nombre, monto: parsearMonto(montoTexto), categoriaId, frecuencia, quincena, diaPago: null, activo };
+    const diaPago = diaTexto === '' ? null : Number(diaTexto);
+    const formulario = { nombre, monto: parsearMonto(montoTexto), categoriaId, frecuencia, quincena, diaPago, activo };
     const encontrados = validarFijo(formulario);
     setErrores(encontrados);
     if (Object.keys(encontrados).length > 0) return;
@@ -127,15 +136,30 @@ export function FormularioFijo({ fijo, categorias, onListo }: Props) {
       />
 
       {frecuencia === 'mensual' && (
-        <Segmentado
-          etiqueta="¿En qué quincena se paga?"
-          valor={quincena}
-          onCambio={setQuincena}
-          opciones={[
-            { valor: 1, etiqueta: 'Quincena 1' },
-            { valor: 2, etiqueta: 'Quincena 2' },
-          ]}
-        />
+        <>
+          <Segmentado
+            etiqueta="¿En qué quincena se paga?"
+            valor={quincena}
+            onCambio={setQuincena}
+            opciones={[
+              { valor: 1, etiqueta: 'Quincena 1' },
+              { valor: 2, etiqueta: 'Quincena 2' },
+            ]}
+          />
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-600">Día de pago (opcional)</span>
+            <input
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="Ej. 5"
+              value={diaTexto}
+              onChange={(e) => setDiaTexto(e.target.value.replace(/\D/g, '').slice(0, 2))}
+              className="w-24 rounded-xl border border-slate-200 bg-white px-3 py-2.5 tabular-nums"
+            />
+            <span className="mt-1 block text-sm text-slate-500">Para recordarte en Google Calendar.</span>
+            <MensajeError mensaje={errores.diaPago} />
+          </label>
+        </>
       )}
 
       <label className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-3">
@@ -152,6 +176,20 @@ export function FormularioFijo({ fijo, categorias, onListo }: Props) {
       >
         Guardar
       </button>
+
+      {fijo && diasCalendario && (
+        <div className="space-y-1">
+          <a
+            href={enlaceCalendario(fijo, diasCalendario, moneda)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-50 py-3 font-medium text-sky-700 hover:bg-sky-100"
+          >
+            📅 Agregar a Google Calendar
+          </a>
+          <p className="text-center text-xs text-slate-500">Si cambias este fijo, actualiza también el evento en Calendar.</p>
+        </div>
+      )}
 
       {fijo && (
         <button

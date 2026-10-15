@@ -5,7 +5,8 @@ import { BurbujaCategoria } from '../../components/BurbujaCategoria';
 import { HojaInferior } from '../../components/HojaInferior';
 import { useCategorias, useFijos, usePerfil } from '../../data/hooks';
 import { formatearMonto } from '../../domain/dinero';
-import { etiquetaFrecuencia, ordenarFijos, type Fijo } from '../../domain/fijos';
+import { etiquetaFrecuencia, etiquetaVencimiento, ordenarFijos, type Fijo } from '../../domain/fijos';
+import { DIAS_PAGO_POR_DEFECTO } from '../../domain/quincena';
 import { useUsuario } from '../auth/contexto';
 import { FormularioFijo } from './FormularioFijo';
 
@@ -54,6 +55,7 @@ export function FijosPage() {
                       <span className="block truncate font-medium text-slate-800">{f.nombre}</span>
                       <span className="block text-sm text-slate-500">
                         {etiquetaFrecuencia(f)}
+                        {etiquetaVencimiento(f) ? ` · ${etiquetaVencimiento(f)}` : ''}
                         {f.activo ? '' : ' · Pausado'}
                       </span>
                     </span>
@@ -85,6 +87,8 @@ export function FijosPage() {
             key={editando === 'nuevo' ? 'nuevo' : editando.id}
             fijo={editando === 'nuevo' ? undefined : editando}
             categorias={categorias}
+            diasPago={perfil?.diasPago ?? DIAS_PAGO_POR_DEFECTO}
+            moneda={moneda}
             onListo={() => setEditando(null)}
           />
         )}
