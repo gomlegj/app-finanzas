@@ -5,6 +5,7 @@ import {
   cumplida,
   fechaEstimada,
   normalizarMeta,
+  pendientesDeMetas,
   progreso,
   validarMeta,
   type FormularioMeta,
@@ -177,5 +178,47 @@ describe('fechaEstimada', () => {
     expect(fechaEstimada(meta('a', { objetivo: 600000 }), 600000, Q_OCT, DIAS)).toBeNull();
     const porFecha = meta('b', { modo: 'fecha', cuotaQuincenal: undefined, fechaObjetivo: '2027-01-01' });
     expect(fechaEstimada(porFecha, 0, Q_OCT, DIAS)).toBeNull();
+  });
+});
+
+describe('pendientesDeMetas', () => {
+  it('cada meta activa aparece con su cuota, ícono y color, como gasto de Ahorro', () => {
+    const [p] = pendientesDeMetas([meta('viaje', { nombre: 'Viaje', icono: '✈️', color: '#3b82f6' })], Q_OCT, DIAS, []);
+    expect(p).toEqual({
+      origen: { tipo: 'meta', id: 'viaje' },
+      nombre: 'Viaje',
+      categoriaId: 'ahorro',
+      icono: '✈️',
+      color: '#3b82f6',
+      planeado: 150000,
+    });
+  });
+
+  it('omite archivadas y cumplidas antes de la quincena', () => {
+    const metas = [meta('arch', { archivada: true }), meta('lista', { objetivo: 100000 })];
+    const previos = [mov('m1', 'lista', 'gasto', 100000, '2026-10-01')];
+    expect(pendientesDeMetas(metas, Q_OCT, DIAS, previos)).toEqual([]);
+  });
+
+  it('abonos de la quincena la marcan pagada sin cambiar la cuota planeada', () => {
+    const m = meta('v', { modo: 'fecha', cuotaQuincenal: undefined, fechaObjetivo: '2026-12-31', objetivo: 600000 });
+    const movimientos = [mov('m1', 'v', 'gasto', 60000, '2026-10-16'), mov('m2', 'v', 'gasto', 70000, '2026-10-20')];
+    const [p] = pendientesDeMetas([m], Q_OCT, DIAS, movimientos);
+    expect(p.planeado).toBe(100000);
+    expect(p.pagado).toEqual({ monto: 130000, movimientos: ['m2', 'm1'] });
+  });
+
+  it('los abonos anteriores bajan la cuota; los retiros no cuentan como pago', () => {
+    const m = meta('v', { objetivo: 1000000, cuotaQuincenal: 150000 });
+    const movimientos = [mov('m1', 'v', 'gasto', 900000, '2026-10-01'), mov('m2', 'v', 'ingreso', 50000, '2026-10-20')];
+    const [p] = pendientesDeMetas([m], Q_OCT, DIAS, movimientos);
+    expect(p.planeado).toBe(100000);
+    expect(p.pagado).toBeUndefined();
+  });
+
+  it('ignora movimientos fuera de la quincena hacia adelante', () => {
+    const [p] = pendientesDeMetas([meta('v')], Q_OCT, DIAS, [mov('m1', 'v', 'gasto', 150000, '2026-11-02')]);
+    expect(p.pagado).toBeUndefined();
+    expect(p.planeado).toBe(150000);
   });
 });

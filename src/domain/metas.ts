@@ -1,3 +1,5 @@
+import { ID_AHORRO } from './categorias';
+import { ordenarPendientes, resumirPagos, type Pendiente } from './fijos';
 import type { Movimiento } from './movimientos';
 import { desplazarQuincena, type DiasPago, type Quincena } from './quincena';
 
@@ -117,4 +119,36 @@ export function fechaEstimada(meta: MetaCalculable, ahorradoAlInicio: number, qu
   if (meta.modo !== 'cuota' || !meta.cuotaQuincenal || faltante === 0) return null;
   const quincenas = Math.ceil(faltante / meta.cuotaQuincenal);
   return desplazarQuincena(quincena, quincenas - 1, diasPago).hasta;
+}
+
+/**
+ * Cuotas de las metas activas en `quincena`. `movimientosDeMetas`: todos los movimientos con
+ * origen meta, de cualquier fecha (lo anterior a la quincena define la cuota; lo de la quincena, el pago).
+ */
+export function pendientesDeMetas(
+  metas: readonly Meta[],
+  quincena: Quincena,
+  diasPago: DiasPago,
+  movimientosDeMetas: readonly Movimiento[],
+): Pendiente[] {
+  const resultado: Pendiente[] = [];
+  for (const meta of metas) {
+    if (meta.archivada) continue;
+    const propios = movimientosDeMetas.filter((m) => m.origen?.tipo === 'meta' && m.origen.id === meta.id);
+    const alInicio = ahorrado(meta, propios.filter((m) => m.fecha < quincena.desde));
+    const cuota = cuotaDeQuincena(meta, alInicio, quincena, diasPago);
+    if (cuota === 0) continue;
+    const abonos = propios.filter((m) => m.tipo === 'gasto' && m.fecha >= quincena.desde && m.fecha <= quincena.hasta);
+    const pendiente: Pendiente = {
+      origen: { tipo: 'meta', id: meta.id },
+      nombre: meta.nombre,
+      categoriaId: ID_AHORRO,
+      icono: meta.icono,
+      color: meta.color,
+      planeado: cuota,
+    };
+    if (abonos.length > 0) pendiente.pagado = resumirPagos(abonos);
+    resultado.push(pendiente);
+  }
+  return ordenarPendientes(resultado);
 }

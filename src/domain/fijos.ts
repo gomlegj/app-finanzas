@@ -83,12 +83,25 @@ export function ordenarFijos(fijos: readonly Fijo[]): Fijo[] {
 }
 
 export interface Pendiente {
-  origen: { tipo: 'fijo'; id: string };
+  origen: { tipo: 'fijo' | 'meta'; id: string };
   nombre: string;
   categoriaId: string;
+  /** Solo metas: se muestran con su propio ícono y color. */
+  icono?: string;
+  color?: string;
   planeado: number;
   /** Ausente si no está pagado. `movimientos`: ids del más reciente al más antiguo. */
   pagado?: { monto: number; movimientos: string[] };
+}
+
+export function resumirPagos(movimientos: readonly Movimiento[]): { monto: number; movimientos: string[] } {
+  const recientes = [...movimientos].sort((a, b) => b.fecha.localeCompare(a.fecha));
+  return { monto: movimientos.reduce((suma, m) => suma + m.monto, 0), movimientos: recientes.map((m) => m.id) };
+}
+
+/** Sin pagar primero, luego pagados; cada grupo por nombre. */
+export function ordenarPendientes(lista: readonly Pendiente[]): Pendiente[] {
+  return [...lista].sort((a, b) => Number(a.pagado !== undefined) - Number(b.pagado !== undefined) || porNombre(a, b));
 }
 
 /** `movimientos` deben ser solo los de `quincena`. */
@@ -118,17 +131,11 @@ export function pendientesDeQuincena(
       categoriaId: fijo.categoriaId,
       planeado: fijo.monto,
     };
-    if (lista) {
-      const recientes = [...lista].sort((a, b) => b.fecha.localeCompare(a.fecha));
-      pendiente.pagado = {
-        monto: lista.reduce((suma, m) => suma + m.monto, 0),
-        movimientos: recientes.map((m) => m.id),
-      };
-    }
+    if (lista) pendiente.pagado = resumirPagos(lista);
     resultado.push(pendiente);
   }
 
-  return resultado.sort((a, b) => Number(a.pagado !== undefined) - Number(b.pagado !== undefined) || porNombre(a, b));
+  return ordenarPendientes(resultado);
 }
 
 export function comprometido(pendientes: readonly Pendiente[]): number {
