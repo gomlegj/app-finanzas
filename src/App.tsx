@@ -7,6 +7,7 @@ import { QuincenasPage } from './features/ajustes/QuincenasPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { useAuth } from './features/auth/contexto';
 import { InicioPage } from './features/inicio/InicioPage';
+import { MetasPage } from './features/metas/MetasPage';
 import { MovimientosPage } from './features/movimientos/MovimientosPage';
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<InicioPage />} />
         <Route path="movimientos" element={<MovimientosPage />} />
+        <Route path="metas" element={<MetasPage />} />
         <Route path="ajustes" element={<AjustesPage />} />
         <Route path="ajustes/quincenas" element={<QuincenasPage />} />
         <Route path="ajustes/categorias" element={<CategoriasPage />} />

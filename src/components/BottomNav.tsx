@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router';
-import { House, ListOrdered, Plus } from 'lucide-react';
+import { House, ListOrdered, Plus, Target } from 'lucide-react';
 
 const claseEnlace = ({ isActive }: { isActive: boolean }) =>
   `flex flex-1 flex-col items-center gap-1 py-2 text-xs font-medium ${isActive ? 'text-emerald-600' : 'text-slate-400'}`;
@@ -10,6 +10,10 @@ export function BottomNav({ onAgregar }: { onAgregar: () => void }) {
       <NavLink to="/" end className={claseEnlace}>
         <House size={22} />
         Inicio
+      </NavLink>
+      <NavLink to="/metas" className={claseEnlace}>
+        <Target size={22} />
+        Metas
       </NavLink>
       <div className="flex flex-1 justify-center">
         <button

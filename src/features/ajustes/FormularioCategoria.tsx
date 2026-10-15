@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Archive } from 'lucide-react';
 import { BurbujaCategoria } from '../../components/BurbujaCategoria';
 import { MensajeError } from '../../components/MensajeError';
+import { SelectorColor, SelectorIcono } from '../../components/SelectorIconoColor';
 import { useToast } from '../../components/toastContexto';
 import { actualizarCategoria, crearCategoria } from '../../data/categorias';
 import {
@@ -79,41 +80,8 @@ export function FormularioCategoria({ categoria, tipo, todas, onListo }: Props) 
         <MensajeError mensaje={error ?? undefined} />
       </div>
 
-      <fieldset>
-        <legend className="mb-2 text-sm font-medium text-slate-600">Ícono</legend>
-        <div className="grid grid-cols-7 gap-2">
-          {ICONOS_DISPONIBLES.map((opcion) => (
-            <button
-              key={opcion}
-              type="button"
-              aria-pressed={opcion === icono}
-              onClick={() => setIcono(opcion)}
-              className={`flex h-10 items-center justify-center rounded-xl text-xl ${
-                opcion === icono ? 'bg-emerald-100 ring-2 ring-emerald-500' : 'bg-slate-100'
-              }`}
-            >
-              {opcion}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend className="mb-2 text-sm font-medium text-slate-600">Color</legend>
-        <div className="grid grid-cols-8 gap-2">
-          {COLORES_DISPONIBLES.map((opcion) => (
-            <button
-              key={opcion}
-              type="button"
-              aria-label={`Color ${opcion}`}
-              aria-pressed={opcion === color}
-              onClick={() => setColor(opcion)}
-              className={`h-8 w-8 rounded-full ${opcion === color ? 'ring-2 ring-slate-900 ring-offset-2' : ''}`}
-              style={{ backgroundColor: opcion }}
-            />
-          ))}
-        </div>
-      </fieldset>
+      <SelectorIcono valor={icono} onCambio={setIcono} />
+      <SelectorColor valor={color} onCambio={setColor} />
 
       <button
         type="submit"
