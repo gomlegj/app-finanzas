@@ -3,6 +3,7 @@ import {
   aplicaEnQuincena,
   comprometido,
   etiquetaFrecuencia,
+  etiquetaVencimiento,
   normalizarFijo,
   ordenarFijos,
   pendientesDeQuincena,
@@ -18,6 +19,7 @@ const formulario = (cambios: Partial<FormularioFijo> = {}): FormularioFijo => ({
   categoriaId: 'arriendo',
   frecuencia: 'mensual',
   quincena: 1,
+  diaPago: null,
   activo: true,
   ...cambios,
 });
@@ -48,6 +50,22 @@ describe('validarFijo', () => {
     expect(validarFijo(formulario({ monto: 0 })).monto).toBe('Escribe un monto mayor a 0');
     expect(validarFijo(formulario({ categoriaId: '' })).categoriaId).toBe('Elige una categoría');
   });
+
+  it('acepta día de pago vacío o entre 1 y 31', () => {
+    expect(validarFijo(formulario({ diaPago: null }))).toEqual({});
+    expect(validarFijo(formulario({ diaPago: 1 }))).toEqual({});
+    expect(validarFijo(formulario({ diaPago: 31 }))).toEqual({});
+  });
+
+  it('rechaza día de pago fuera de rango o decimal', () => {
+    for (const diaPago of [0, 32, 5.5, Number.NaN]) {
+      expect(validarFijo(formulario({ diaPago })).diaPago).toBe('Usa un día entre 1 y 31');
+    }
+  });
+
+  it('ignora el día de pago si es quincenal', () => {
+    expect(validarFijo(formulario({ frecuencia: 'quincenal', diaPago: 99 }))).toEqual({});
+  });
 });
 
 describe('normalizarFijo', () => {
@@ -69,6 +87,15 @@ describe('normalizarFijo', () => {
   it('lanza si el monto no fue validado', () => {
     expect(() => normalizarFijo(formulario({ monto: null }))).toThrow();
   });
+
+  it('guarda el día de pago si es mensual', () => {
+    expect(normalizarFijo(formulario({ diaPago: 5 })).diaPago).toBe(5);
+  });
+
+  it('no guarda día de pago si es quincenal o está vacío', () => {
+    expect(normalizarFijo(formulario({ frecuencia: 'quincenal', diaPago: 5 }))).not.toHaveProperty('diaPago');
+    expect(normalizarFijo(formulario({ diaPago: null }))).not.toHaveProperty('diaPago');
+  });
 });
 
 describe('etiquetaFrecuencia', () => {
@@ -76,6 +103,13 @@ describe('etiquetaFrecuencia', () => {
     expect(etiquetaFrecuencia(fijo('a'))).toBe('Quincenal');
     expect(etiquetaFrecuencia(fijo('a', { frecuencia: 'mensual', quincena: 1 }))).toBe('Mensual · Q1');
     expect(etiquetaFrecuencia(fijo('a', { frecuencia: 'mensual', quincena: 2 }))).toBe('Mensual · Q2');
+  });
+});
+
+describe('etiquetaVencimiento', () => {
+  it('dice el día si lo tiene', () => {
+    expect(etiquetaVencimiento(fijo('a', { frecuencia: 'mensual', quincena: 1, diaPago: 5 }))).toBe('vence el 5');
+    expect(etiquetaVencimiento(fijo('a'))).toBeNull();
   });
 });
 

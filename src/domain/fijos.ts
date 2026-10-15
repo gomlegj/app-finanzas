@@ -11,6 +11,8 @@ export interface DatosFijo {
   frecuencia: Frecuencia;
   /** Solo si `frecuencia === 'mensual'`. */
   quincena?: NumeroQuincena;
+  /** Día en que vence (1–31), solo si es mensual. Solo para el recordatorio. */
+  diaPago?: number;
   activo: boolean;
 }
 
@@ -25,10 +27,12 @@ export interface FormularioFijo {
   frecuencia: Frecuencia;
   /** Se ignora si la frecuencia es quincenal. */
   quincena: NumeroQuincena;
+  /** `null` = sin día. Se ignora si la frecuencia es quincenal. */
+  diaPago: number | null;
   activo: boolean;
 }
 
-export type ErroresFijo = Partial<Record<'nombre' | 'monto' | 'categoriaId', string>>;
+export type ErroresFijo = Partial<Record<'nombre' | 'monto' | 'categoriaId' | 'diaPago', string>>;
 
 export const MAX_NOMBRE_FIJO = 40;
 
@@ -39,6 +43,8 @@ export function validarFijo(f: FormularioFijo): ErroresFijo {
   else if (nombre.length > MAX_NOMBRE_FIJO) errores.nombre = `Máximo ${MAX_NOMBRE_FIJO} caracteres`;
   if (f.monto === null || f.monto <= 0) errores.monto = 'Escribe un monto mayor a 0';
   if (!f.categoriaId) errores.categoriaId = 'Elige una categoría';
+  const diaValido = f.diaPago === null || (Number.isInteger(f.diaPago) && f.diaPago >= 1 && f.diaPago <= 31);
+  if (f.frecuencia === 'mensual' && !diaValido) errores.diaPago = 'Usa un día entre 1 y 31';
   return errores;
 }
 
@@ -51,12 +57,19 @@ export function normalizarFijo(f: FormularioFijo): DatosFijo {
     frecuencia: f.frecuencia,
     activo: f.activo,
   };
-  if (f.frecuencia === 'mensual') datos.quincena = f.quincena;
+  if (f.frecuencia === 'mensual') {
+    datos.quincena = f.quincena;
+    if (f.diaPago !== null) datos.diaPago = f.diaPago;
+  }
   return datos;
 }
 
 export function etiquetaFrecuencia(fijo: DatosFijo): string {
   return fijo.frecuencia === 'quincenal' ? 'Quincenal' : `Mensual · Q${fijo.quincena ?? 1}`;
+}
+
+export function etiquetaVencimiento(fijo: DatosFijo): string | null {
+  return fijo.diaPago ? `vence el ${fijo.diaPago}` : null;
 }
 
 export function aplicaEnQuincena(fijo: DatosFijo, numero: NumeroQuincena): boolean {

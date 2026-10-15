@@ -41,7 +41,7 @@ export function FormularioFijo({ fijo, categorias, onListo }: Props) {
 
   function guardar(e: FormEvent) {
     e.preventDefault();
-    const formulario = { nombre, monto: parsearMonto(montoTexto), categoriaId, frecuencia, quincena, activo };
+    const formulario = { nombre, monto: parsearMonto(montoTexto), categoriaId, frecuencia, quincena, diaPago: null, activo };
     const encontrados = validarFijo(formulario);
     setErrores(encontrados);
     if (Object.keys(encontrados).length > 0) return;
