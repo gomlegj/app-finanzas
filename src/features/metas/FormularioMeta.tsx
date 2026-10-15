@@ -23,8 +23,8 @@ import { useUsuario } from '../auth/contexto';
 
 interface Props {
   meta?: Meta;
-  /** Lo ahorrado al inicio de la quincena actual (para la vista previa al editar). */
-  ahorradoAlInicio?: number;
+  /** Abonos menos retiros antes de la quincena actual, sin el ahorro inicial (vista previa al editar). */
+  movidoAntes?: number;
   diasPago: DiasPago;
   moneda: string;
   onListo: () => void;
@@ -32,7 +32,7 @@ interface Props {
 
 const textoMonto = (valor?: number) => (valor ? agruparMiles(String(valor)) : '');
 
-export function FormularioMeta({ meta, ahorradoAlInicio, diasPago, moneda, onListo }: Props) {
+export function FormularioMeta({ meta, movidoAntes = 0, diasPago, moneda, onListo }: Props) {
   const usuario = useUsuario();
   const { mostrar } = useToast();
   const hoy = fechaLocalISO();
@@ -61,7 +61,7 @@ export function FormularioMeta({ meta, ahorradoAlInicio, diasPago, moneda, onLis
   const valida = Object.keys(validarMeta(formulario, { hoy, creando: !meta })).length === 0;
   const previa = valida ? normalizarMeta(formulario) : null;
   const quincena = quincenaDe(new Date(), diasPago);
-  const base = ahorradoAlInicio ?? previa?.ahorroInicial ?? 0;
+  const base = (previa?.ahorroInicial ?? 0) + movidoAntes;
   let textoPrevia: string | null = null;
   if (previa?.modo === 'fecha') {
     textoPrevia = `Necesitas ${formatearMonto(cuotaDeQuincena(previa, base, quincena, diasPago), moneda)} por quincena`;

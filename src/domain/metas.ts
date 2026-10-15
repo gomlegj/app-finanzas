@@ -91,11 +91,14 @@ export function cumplida(meta: Pick<Meta, 'objetivo'>, ahorradoActual: number): 
   return ahorradoActual >= meta.objetivo;
 }
 
-/** Quincenas desde la actual (incluida) hasta la que contiene `fecha` (incluida); mínimo 1. */
+/** Tope de cálculo: 50 años de quincenas. Más allá no aporta y las fechas se salen del rango válido. */
+const MAX_QUINCENAS = 1200;
+
+/** Quincenas desde la actual (incluida) hasta la que contiene `fecha` (incluida); mínimo 1, máximo MAX_QUINCENAS. */
 function quincenasHasta(quincena: Quincena, fecha: string, diasPago: DiasPago): number {
   let cuenta = 1;
   let actual = quincena;
-  while (actual.hasta < fecha) {
+  while (actual.hasta < fecha && cuenta < MAX_QUINCENAS) {
     actual = desplazarQuincena(actual, 1, diasPago);
     cuenta++;
   }
@@ -118,6 +121,7 @@ export function fechaEstimada(meta: MetaCalculable, ahorradoAlInicio: number, qu
   const faltante = Math.max(0, meta.objetivo - ahorradoAlInicio);
   if (meta.modo !== 'cuota' || !meta.cuotaQuincenal || faltante === 0) return null;
   const quincenas = Math.ceil(faltante / meta.cuotaQuincenal);
+  if (quincenas > MAX_QUINCENAS) return null;
   return desplazarQuincena(quincena, quincenas - 1, diasPago).hasta;
 }
 
@@ -151,4 +155,18 @@ export function pendientesDeMetas(
     resultado.push(pendiente);
   }
   return ordenarPendientes(resultado);
+}
+
+/** Lo abonado (gastos con origen en la meta) dentro de la quincena. */
+export function abonadoEnQuincena(meta: Pick<Meta, 'id'>, movimientos: readonly Movimiento[], quincena: Quincena): number {
+  return movimientos
+    .filter(
+      (m) =>
+        m.tipo === 'gasto' &&
+        m.origen?.tipo === 'meta' &&
+        m.origen.id === meta.id &&
+        m.fecha >= quincena.desde &&
+        m.fecha <= quincena.hasta,
+    )
+    .reduce((suma, m) => suma + m.monto, 0);
 }

@@ -7,6 +7,7 @@ interface Props {
   meta: Meta;
   ahorrado: number;
   cuota: number;
+  abonadoEnQuincena: number;
   fechaEstimada: string | null;
   moneda: string;
   /** Sin datos confiables de lo ahorrado (falló la carga): no se permite abonar ni retirar. */
@@ -16,7 +17,18 @@ interface Props {
   onEditar: () => void;
 }
 
-export function TarjetaMeta({ meta, ahorrado, cuota, fechaEstimada, moneda, sinDatos, onAbonar, onRetirar, onEditar }: Props) {
+export function TarjetaMeta({
+  meta,
+  ahorrado,
+  cuota,
+  abonadoEnQuincena,
+  fechaEstimada,
+  moneda,
+  sinDatos,
+  onAbonar,
+  onRetirar,
+  onEditar,
+}: Props) {
   const lista = cumplida(meta, ahorrado);
   const porcentaje = progreso(meta, ahorrado);
   const detalle = lista
@@ -45,6 +57,9 @@ export function TarjetaMeta({ meta, ahorrado, cuota, fechaEstimada, moneda, sinD
         <div className="h-full rounded-full" style={{ width: `${sinDatos ? 0 : porcentaje}%`, backgroundColor: meta.color }} />
       </div>
       {!sinDatos && <p className="mt-2 text-sm text-slate-600">{detalle}</p>}
+      {!sinDatos && abonadoEnQuincena > 0 && (
+        <p className="text-sm font-medium text-emerald-700">✓ Abonaste {formatearMonto(abonadoEnQuincena, moneda)} esta quincena</p>
+      )}
 
       <div className="mt-3 flex gap-2">
         {!lista && (

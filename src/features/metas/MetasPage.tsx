@@ -5,7 +5,7 @@ import { HojaInferior } from '../../components/HojaInferior';
 import { useToast } from '../../components/toastContexto';
 import { archivarMeta } from '../../data/metas';
 import { useMetas, useMovimientosDeMetas, usePerfil } from '../../data/hooks';
-import { ahorrado, cuotaDeQuincena, fechaEstimada, type Meta } from '../../domain/metas';
+import { abonadoEnQuincena, ahorrado, cuotaDeQuincena, fechaEstimada, type Meta } from '../../domain/metas';
 import { DIAS_PAGO_POR_DEFECTO, quincenaDe } from '../../domain/quincena';
 import { useUsuario } from '../auth/contexto';
 import { RegistroRapido, type Prellenado } from '../movimientos/RegistroRapido';
@@ -32,6 +32,8 @@ export function MetasPage() {
   const activas = metas.datos.filter((m) => !m.archivada).sort(porNombre);
   const archivadas = metas.datos.filter((m) => m.archivada).sort(porNombre);
   const ahorradoAlInicio = (m: Meta) => ahorrado(m, anteriores);
+  // Solo movimientos (sin ahorro inicial): el formulario suma el ahorro inicial que se esté editando.
+  const movidoAntes = (m: Meta) => ahorrado({ id: m.id, ahorroInicial: 0 }, anteriores);
 
   function restaurar(meta: Meta) {
     archivarMeta(usuario.uid, meta.id, false).catch(() => mostrar('No se pudo restaurar la meta', 'error'));
@@ -57,16 +59,19 @@ export function MetasPage() {
           const total = ahorrado(m, movimientos.datos);
           const alInicio = ahorradoAlInicio(m);
           const cuota = cuotaDeQuincena(m, alInicio, quincena, diasPago);
+          const abonado = abonadoEnQuincena(m, movimientos.datos, quincena);
           return (
             <TarjetaMeta
               key={m.id}
               meta={m}
               ahorrado={total}
               cuota={cuota}
+              abonadoEnQuincena={abonado}
               fechaEstimada={fechaEstimada(m, alInicio, quincena, diasPago)}
               moneda={moneda}
               sinDatos={movimientos.error}
-              onAbonar={() => setRegistro(prellenadoAbono(m, cuota))}
+              // Si ya abonó algo esta quincena, se sugiere solo lo que falta para no abonar dos veces.
+              onAbonar={() => setRegistro(prellenadoAbono(m, Math.max(0, cuota - abonado)))}
               onRetirar={() => setRegistro(prellenadoRetiro(m, total, moneda))}
               onEditar={() => setEditando(m)}
             />
@@ -122,7 +127,7 @@ export function MetasPage() {
           <FormularioMeta
             key={editando === 'nueva' ? 'nueva' : editando.id}
             meta={editando === 'nueva' ? undefined : editando}
-            ahorradoAlInicio={editando === 'nueva' ? undefined : ahorradoAlInicio(editando)}
+            movidoAntes={editando === 'nueva' ? undefined : movidoAntes(editando)}
             diasPago={diasPago}
             moneda={moneda}
             onListo={() => setEditando(null)}

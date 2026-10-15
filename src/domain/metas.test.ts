@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  abonadoEnQuincena,
   ahorrado,
   cuotaDeQuincena,
   cumplida,
@@ -220,5 +221,30 @@ describe('pendientesDeMetas', () => {
     const [p] = pendientesDeMetas([meta('v')], Q_OCT, DIAS, [mov('m1', 'v', 'gasto', 150000, '2026-11-02')]);
     expect(p.pagado).toBeUndefined();
     expect(p.planeado).toBe(150000);
+  });
+});
+
+describe('límites de cálculo', () => {
+  it('una cuota diminuta no rompe la fecha estimada (más de 50 años → sin fecha)', () => {
+    const m = meta('a', { objetivo: 3000000, cuotaQuincenal: 1 });
+    expect(fechaEstimada(m, 0, Q_OCT, DIAS)).toBeNull();
+  });
+
+  it('una fecha objetivo lejanísima no rompe la cuota', () => {
+    const m = meta('a', { modo: 'fecha', cuotaQuincenal: undefined, fechaObjetivo: '9999-12-31', objetivo: 1200000 });
+    expect(cuotaDeQuincena(m, 0, Q_OCT, DIAS)).toBeGreaterThan(0);
+  });
+});
+
+describe('abonadoEnQuincena', () => {
+  it('suma solo los abonos de esa meta dentro de la quincena', () => {
+    const movimientos = [
+      mov('m1', 'v', 'gasto', 60000, '2026-10-16'),
+      mov('m2', 'v', 'gasto', 40000, '2026-10-29'),
+      mov('m3', 'v', 'ingreso', 10000, '2026-10-20'),
+      mov('m4', 'v', 'gasto', 99999, '2026-10-14'),
+      mov('m5', 'otra', 'gasto', 99999, '2026-10-20'),
+    ];
+    expect(abonadoEnQuincena(meta('v'), movimientos, Q_OCT)).toBe(100000);
   });
 });
