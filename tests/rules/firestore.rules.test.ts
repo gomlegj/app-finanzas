@@ -138,7 +138,7 @@ describe('categorías', () => {
 });
 
 describe('colecciones de fases futuras', () => {
-  it.each(['metas', 'deudas'])('rechaza escribir en %s', async (coleccion) => {
+  it.each(['deudas'])('rechaza escribir en %s', async (coleccion) => {
     await assertFails(setDoc(doc(como(ALICIA), `users/${ALICIA}/${coleccion}/x`), { nombre: 'x' }));
   });
 });
@@ -271,6 +271,13 @@ describe('origen de movimientos', () => {
     await assertFails(updateDoc(doc(como(ALICIA), ruta('m2')), { tipo: 'ingreso', categoriaId: 'salario' }));
   });
 
+  it('un retiro de meta puede ser ingreso; fijos y deudas no', async () => {
+    const retiro = { ...movimiento, tipo: 'ingreso', categoriaId: 'retiro-ahorro', origen: { tipo: 'meta', id: 'g1' } };
+    await assertSucceeds(setDoc(doc(como(ALICIA), ruta('r1')), retiro));
+    await assertFails(setDoc(doc(como(ALICIA), ruta('r2')), { ...retiro, origen: { tipo: 'deuda', id: 'd1' } }));
+    await assertFails(setDoc(doc(como(ALICIA), ruta('r3')), { ...retiro, origen: { tipo: 'fijo', id: 'f1' } }));
+  });
+
   it('editar monto o nota conserva el origen', async () => {
     await sembrar(ruta(), conOrigen);
     await assertSucceeds(updateDoc(doc(como(ALICIA), ruta()), { monto: 99000, nota: 'subió' }));
@@ -282,5 +289,59 @@ describe('origen de movimientos', () => {
     await assertFails(updateDoc(doc(como(ALICIA), ruta()), { origen: deleteField() }));
     await sembrar(ruta('m2'), movimiento);
     await assertFails(updateDoc(doc(como(ALICIA), ruta('m2')), { origen: { tipo: 'fijo', id: 'f1' } }));
+  });
+});
+
+describe('metas', () => {
+  const ruta = (uid: string, id = 'g1') => `users/${uid}/metas/${id}`;
+  const porFecha = {
+    nombre: 'Viaje', icono: '✈️', color: '#3b82f6', objetivo: 3000000, ahorroInicial: 0,
+    modo: 'fecha', fechaObjetivo: '2027-06-15', archivada: false,
+  };
+  const porCuota = {
+    nombre: 'Fondo', icono: '🏦', color: '#10b981', objetivo: 1000000, ahorroInicial: 200000,
+    modo: 'cuota', cuotaQuincenal: 150000, archivada: false,
+  };
+
+  it('crea metas por fecha y por cuota', async () => {
+    await assertSucceeds(setDoc(doc(como(ALICIA), ruta(ALICIA, 'a')), porFecha));
+    await assertSucceeds(setDoc(doc(como(ALICIA), ruta(ALICIA, 'b')), porCuota));
+  });
+
+  it.each([
+    ['nombre vacío', { ...porFecha, nombre: '' }],
+    ['objetivo 0', { ...porFecha, objetivo: 0 }],
+    ['objetivo decimal', { ...porFecha, objetivo: 10.5 }],
+    ['ahorro inicial negativo', { ...porFecha, ahorroInicial: -1 }],
+    ['modo inválido', { ...porFecha, modo: 'otro' }],
+    ['fecha mal formada', { ...porFecha, fechaObjetivo: '15/06/2027' }],
+    ['fecha con cuota', { ...porFecha, cuotaQuincenal: 1 }],
+    ['cuota con fecha', { ...porCuota, fechaObjetivo: '2027-01-01' }],
+    ['cuota 0', { ...porCuota, cuotaQuincenal: 0 }],
+    ['archivada como texto', { ...porCuota, archivada: 'no' }],
+    ['modo fecha sin fecha', { nombre: 'X', icono: '✈️', color: '#000', objetivo: 1, ahorroInicial: 0, modo: 'fecha', archivada: false }],
+    ['modo cuota sin cuota', { nombre: 'X', icono: '✈️', color: '#000', objetivo: 1, ahorroInicial: 0, modo: 'cuota', archivada: false }],
+  ])('rechaza %s', async (_n, datos) => {
+    await assertFails(setDoc(doc(como(ALICIA), ruta(ALICIA)), datos));
+  });
+
+  it('cambiar de modo exige borrar el campo del otro', async () => {
+    await sembrar(ruta(ALICIA), porFecha);
+    await assertFails(updateDoc(doc(como(ALICIA), ruta(ALICIA)), { modo: 'cuota', cuotaQuincenal: 100000 }));
+    await assertSucceeds(
+      updateDoc(doc(como(ALICIA), ruta(ALICIA)), { modo: 'cuota', cuotaQuincenal: 100000, fechaObjetivo: deleteField() }),
+    );
+  });
+
+  it('la dueña archiva pero no borra', async () => {
+    await sembrar(ruta(ALICIA), porCuota);
+    await assertSucceeds(updateDoc(doc(como(ALICIA), ruta(ALICIA)), { archivada: true }));
+    await assertFails(deleteDoc(doc(como(ALICIA), ruta(ALICIA))));
+  });
+
+  it('otro usuario no lee ni escribe metas ajenas', async () => {
+    await sembrar(ruta(ALICIA), porCuota);
+    await assertFails(getDoc(doc(como(BETO), ruta(ALICIA))));
+    await assertFails(setDoc(doc(como(BETO), ruta(ALICIA, 'g9')), porCuota));
   });
 });

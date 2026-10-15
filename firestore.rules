@@ -44,13 +44,13 @@ service cloud.firestore {
 
       match /movimientos/{id} {
         function origenValido(d) {
-          // Un pago (de fijo, deuda o meta) siempre es gasto.
+          // Un pago (fijo o deuda) siempre es gasto; una meta admite abonos (gasto) y retiros (ingreso).
           return !('origen' in d) || (
-            d.tipo == 'gasto'
-            && d.origen is map
+            d.origen is map
             && d.origen.keys().hasOnly(['tipo', 'id'])
             && d.origen.tipo in ['fijo', 'deuda', 'meta']
-            && d.origen.id is string && d.origen.id.size() > 0);
+            && d.origen.id is string && d.origen.id.size() > 0
+            && (d.tipo == 'gasto' || d.origen.tipo == 'meta'));
         }
 
         function movimientoValido() {
@@ -85,6 +85,26 @@ service cloud.firestore {
 
         allow read, delete: if esDueno(uid);
         allow create, update: if esDueno(uid) && fijoValido();
+      }
+
+      match /metas/{id} {
+        function metaValida() {
+          let d = request.resource.data;
+          return d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 40
+            && d.icono is string && d.color is string
+            && d.objetivo is int && d.objetivo > 0
+            && d.ahorroInicial is int && d.ahorroInicial >= 0
+            && d.archivada is bool
+            && ((d.modo == 'fecha' && 'fechaObjetivo' in d && d.fechaObjetivo is string
+                  && d.fechaObjetivo.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') && !('cuotaQuincenal' in d))
+              || (d.modo == 'cuota' && 'cuotaQuincenal' in d && d.cuotaQuincenal is int && d.cuotaQuincenal > 0
+                  && !('fechaObjetivo' in d)));
+        }
+
+        allow read: if esDueno(uid);
+        allow create, update: if esDueno(uid) && metaValida();
+        // Se archivan: borrar dejaría abonos sin su meta.
+        allow delete: if false;
       }
     }
   }
