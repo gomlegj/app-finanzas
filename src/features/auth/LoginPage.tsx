@@ -24,7 +24,7 @@ export function LoginPage() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-gradient-to-b from-emerald-50 to-slate-50 px-8 text-center">
       <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-500 text-4xl shadow-lg shadow-emerald-500/30">
-        🐷
+        🐿️
       </div>
       <h1 className="text-3xl font-bold text-slate-900">Mis finanzas</h1>
       <p className="mt-2 text-slate-500">Tus gastos, ingresos y metas, en un solo lugar.</p>

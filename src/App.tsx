@@ -13,7 +13,7 @@ export default function App() {
   const { usuario, cargando } = useAuth();
 
   if (cargando) {
-    return <div className="flex min-h-dvh animate-pulse items-center justify-center text-5xl">🐷</div>;
+    return <div className="flex min-h-dvh animate-pulse items-center justify-center text-5xl">🐿️</div>;
   }
   if (!usuario) return <LoginPage />;
 

@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   CATEGORIAS_POR_DEFECTO,
   categoriasActivas,
+  ICONOS_DISPONIBLES,
+  ID_AHORRO,
+  ID_RETIRO_AHORRO,
   siguienteOrden,
   validarNombreCategoria,
   type Categoria,
@@ -25,9 +28,24 @@ describe('CATEGORIAS_POR_DEFECTO', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('incluye Ahorro y Deudas como categorías de sistema', () => {
+  it('incluye Ahorro, Deudas y Retiro de ahorro como categorías de sistema', () => {
     const sistema = CATEGORIAS_POR_DEFECTO.filter((c) => c.sistema).map((c) => c.id).sort();
-    expect(sistema).toEqual(['ahorro', 'deudas']);
+    expect(sistema).toEqual(['ahorro', 'deudas', 'retiro-ahorro']);
+  });
+
+  it('Ahorro es gasto y Retiro de ahorro es ingreso', () => {
+    expect(CATEGORIAS_POR_DEFECTO.find((c) => c.id === ID_AHORRO)?.tipo).toBe('gasto');
+    expect(CATEGORIAS_POR_DEFECTO.find((c) => c.id === ID_RETIRO_AHORRO)).toMatchObject({
+      nombre: 'Retiro de ahorro',
+      tipo: 'ingreso',
+      icono: '💸',
+    });
+  });
+
+  it('no usa cerditos', () => {
+    expect(JSON.stringify(CATEGORIAS_POR_DEFECTO)).not.toContain('🐷');
+    expect(ICONOS_DISPONIBLES).not.toContain('🐷');
+    expect(CATEGORIAS_POR_DEFECTO.find((c) => c.id === ID_AHORRO)?.icono).toBe('🐿️');
   });
 
   it('incluye gastos e ingresos', () => {
