@@ -34,7 +34,16 @@ export function InicioPage() {
   const nombre = (perfil?.nombre || usuario.displayName || '').split(' ')[0];
 
   function pagar(p: Pendiente) {
-    setHoja({ prellenado: { monto: p.planeado, categoriaId: p.categoriaId, nota: p.nombre, origen: p.origen } });
+    setHoja({
+      prellenado: {
+        tipo: 'gasto',
+        monto: p.planeado,
+        categoriaId: p.categoriaId,
+        nota: p.nombre,
+        origen: p.origen,
+        titulo: p.origen.tipo === 'meta' ? 'Abonar a la meta' : 'Registrar pago',
+      },
+    });
   }
 
   function abrirPago(movimientoId: string) {
