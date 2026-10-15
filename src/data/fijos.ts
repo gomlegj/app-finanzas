@@ -33,9 +33,13 @@ export async function crearFijo(uid: string, datos: DatosFijo): Promise<void> {
   await addDoc(coleccion(uid), { ...datos, creadoEn: serverTimestamp() });
 }
 
-/** Reemplaza los datos editables; si pasa a quincenal se borra `quincena` (las reglas lo exigen). */
+/** Reemplaza los datos editables; borra `quincena` y `diaPago` si no vienen (las reglas lo exigen al pasar a quincenal). */
 export function actualizarFijo(uid: string, id: string, datos: DatosFijo): Promise<void> {
-  return updateDoc(doc(coleccion(uid), id), { ...datos, quincena: datos.quincena ?? deleteField() });
+  return updateDoc(doc(coleccion(uid), id), {
+    ...datos,
+    quincena: datos.quincena ?? deleteField(),
+    diaPago: datos.diaPago ?? deleteField(),
+  });
 }
 
 export function borrarFijo(uid: string, id: string): Promise<void> {

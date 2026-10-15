@@ -78,7 +78,9 @@ service cloud.firestore {
             && d.categoriaId is string && d.categoriaId.size() > 0
             && d.activo is bool
             && ((d.frecuencia == 'mensual' && 'quincena' in d && d.quincena is int && d.quincena in [1, 2])
-              || (d.frecuencia == 'quincenal' && !('quincena' in d)));
+              || (d.frecuencia == 'quincenal' && !('quincena' in d)))
+            && (!('diaPago' in d)
+              || (d.frecuencia == 'mensual' && d.diaPago is int && d.diaPago >= 1 && d.diaPago <= 31));
         }
 
         allow read, delete: if esDueno(uid);

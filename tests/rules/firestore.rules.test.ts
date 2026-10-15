@@ -208,6 +208,29 @@ describe('fijos', () => {
     await assertSucceeds(updateDoc(doc(como(ALICIA), ruta(ALICIA)), { frecuencia: 'quincenal', quincena: deleteField() }));
   });
 
+  it('acepta día de pago entre 1 y 31 en mensuales', async () => {
+    await assertSucceeds(setDoc(doc(como(ALICIA), ruta(ALICIA, 'a')), { ...mensual, diaPago: 1 }));
+    await assertSucceeds(setDoc(doc(como(ALICIA), ruta(ALICIA, 'b')), { ...mensual, diaPago: 31 }));
+  });
+
+  it.each([
+    ['día 0', { ...mensual, diaPago: 0 }],
+    ['día 32', { ...mensual, diaPago: 32 }],
+    ['día decimal', { ...mensual, diaPago: 5.5 }],
+    ['día como texto', { ...mensual, diaPago: '5' }],
+    ['día en un quincenal', { ...quincenal, diaPago: 5 }],
+  ])('rechaza %s', async (_n, datos) => {
+    await assertFails(setDoc(doc(como(ALICIA), ruta(ALICIA)), datos));
+  });
+
+  it('al editar se puede borrar el día, y pasar a quincenal exige borrarlo', async () => {
+    await sembrar(ruta(ALICIA), { ...mensual, diaPago: 5 });
+    await assertFails(
+      updateDoc(doc(como(ALICIA), ruta(ALICIA)), { frecuencia: 'quincenal', quincena: deleteField() }),
+    );
+    await assertSucceeds(updateDoc(doc(como(ALICIA), ruta(ALICIA)), { diaPago: deleteField() }));
+  });
+
   it('la dueña pausa y borra', async () => {
     await sembrar(ruta(ALICIA), mensual);
     await assertSucceeds(updateDoc(doc(como(ALICIA), ruta(ALICIA)), { activo: false }));
