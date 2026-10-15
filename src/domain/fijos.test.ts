@@ -6,6 +6,7 @@ import {
   etiquetaVencimiento,
   normalizarFijo,
   ordenarFijos,
+  ordenarPendientes,
   pendientesDeQuincena,
   validarFijo,
   type Fijo,
@@ -220,5 +221,16 @@ describe('comprometido', () => {
 
   it('sin fijos es 0', () => {
     expect(comprometido([])).toBe(0);
+  });
+});
+
+describe('ordenarPendientes', () => {
+  it('mezcla fijos y metas: sin pagar primero, luego por nombre', () => {
+    const lista = ordenarPendientes([
+      { origen: { tipo: 'meta', id: 'v' }, nombre: 'Viaje', categoriaId: 'ahorro', planeado: 1 },
+      { origen: { tipo: 'fijo', id: 'a' }, nombre: 'Arriendo', categoriaId: 'arriendo', planeado: 1, pagado: { monto: 1, movimientos: ['m'] } },
+      { origen: { tipo: 'fijo', id: 'i' }, nombre: 'Internet', categoriaId: 'servicios', planeado: 1 },
+    ]);
+    expect(lista.map((p) => p.nombre)).toEqual(['Internet', 'Viaje', 'Arriendo']);
   });
 });

@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { FilaMovimiento } from '../../components/FilaMovimiento';
-import { useCategorias, useFijos, useMovimientosEntre, usePerfil } from '../../data/hooks';
+import { useCategorias, useFijos, useMetas, useMovimientosDeMetas, useMovimientosEntre, usePerfil } from '../../data/hooks';
 import { formatearMonto } from '../../domain/dinero';
-import { comprometido, pendientesDeQuincena, type Pendiente } from '../../domain/fijos';
+import { comprometido, ordenarPendientes, pendientesDeQuincena, type Pendiente } from '../../domain/fijos';
+import { pendientesDeMetas } from '../../domain/metas';
 import type { Movimiento } from '../../domain/movimientos';
 import { resumenQuincena } from '../../domain/presupuesto';
 import { DIAS_PAGO_POR_DEFECTO, etiquetaQuincena, quincenaDe } from '../../domain/quincena';
 import { useUsuario } from '../auth/contexto';
 import { RegistroRapido, type Prellenado } from '../movimientos/RegistroRapido';
-import { FijosQuincena } from './FijosQuincena';
+import { PendientesQuincena } from './PendientesQuincena';
 import { GastoPorCategoria } from './GastoPorCategoria';
 
 const CANTIDAD_ULTIMOS = 5;
@@ -22,19 +23,34 @@ export function InicioPage() {
 
   const { datos: perfil } = usePerfil(usuario.uid);
   const moneda = perfil?.moneda ?? 'COP';
-  const quincena = quincenaDe(new Date(), perfil?.diasPago ?? DIAS_PAGO_POR_DEFECTO);
+  const diasPago = perfil?.diasPago ?? DIAS_PAGO_POR_DEFECTO;
+  const quincena = quincenaDe(new Date(), diasPago);
   const { datos: movimientos, cargando, error } = useMovimientosEntre(usuario.uid, quincena.desde, quincena.hasta);
   const { datos: categorias } = useCategorias(usuario.uid);
   const fijos = useFijos(usuario.uid);
+  const metas = useMetas(usuario.uid);
+  const movimientosDeMetas = useMovimientosDeMetas(usuario.uid);
 
   const porId = new Map(categorias.map((c) => [c.id, c]));
-  const pendientes = pendientesDeQuincena(fijos.datos, quincena, movimientos);
+  const pendientes = ordenarPendientes([
+    ...pendientesDeQuincena(fijos.datos, quincena, movimientos),
+    ...pendientesDeMetas(metas.datos, quincena, diasPago, movimientosDeMetas.datos),
+  ]);
   const resumen = resumenQuincena(movimientos, comprometido(pendientes));
   const ultimos = movimientos.slice(0, CANTIDAD_ULTIMOS);
   const nombre = (perfil?.nombre || usuario.displayName || '').split(' ')[0];
 
   function pagar(p: Pendiente) {
-    setHoja({ prellenado: { monto: p.planeado, categoriaId: p.categoriaId, nota: p.nombre, origen: p.origen } });
+    setHoja({
+      prellenado: {
+        tipo: 'gasto',
+        monto: p.planeado,
+        categoriaId: p.categoriaId,
+        nota: p.nombre,
+        origen: p.origen,
+        titulo: p.origen.tipo === 'meta' ? 'Abonar a la meta' : 'Registrar pago',
+      },
+    });
   }
 
   function abrirPago(movimientoId: string) {
@@ -72,13 +88,13 @@ export function InicioPage() {
         </p>
       )}
 
-      <FijosQuincena
+      <PendientesQuincena
         pendientes={pendientes}
         categorias={porId}
         moneda={moneda}
-        cargando={fijos.cargando || cargando}
-        // Sin movimientos no se sabe qué está pagado: mostrar "Pagado" invitaría a pagar dos veces.
-        error={fijos.error || error}
+        cargando={fijos.cargando || metas.cargando || movimientosDeMetas.cargando || cargando}
+        // Sin todos los datos no se sabe qué está pagado: mostrar botones invitaría a pagar dos veces.
+        error={fijos.error || metas.error || movimientosDeMetas.error || error}
         onPagar={pagar}
         onAbrirPago={abrirPago}
       />

@@ -40,6 +40,22 @@ export function escucharMovimientosEntre(
   );
 }
 
+/** Todos los abonos y retiros de metas, de cualquier fecha: lo ahorrado se calcula con ellos. */
+export function escucharMovimientosDeMetas(
+  uid: string,
+  alCambiar: (movimientos: Movimiento[]) => void,
+  alFallar?: (error: unknown) => void,
+): Unsubscribe {
+  return onSnapshot(
+    query(coleccion(uid), where('origen.tipo', '==', 'meta')),
+    (snap) => alCambiar(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Movimiento, 'id'>) }))),
+    (error) => {
+      console.error('Error escuchando movimientos de metas', error);
+      alFallar?.(error);
+    },
+  );
+}
+
 export async function crearMovimiento(uid: string, datos: DatosMovimiento, origen?: OrigenMovimiento): Promise<void> {
   await addDoc(coleccion(uid), { ...datos, ...(origen ? { origen } : {}), creadoEn: serverTimestamp() });
 }

@@ -22,24 +22,29 @@ import {
 import { useUsuario } from '../auth/contexto';
 
 export interface Prellenado {
-  monto: number;
+  tipo: TipoMovimiento;
+  /** Vacío si la persona debe escribirlo (p. ej. un retiro). */
+  monto?: number;
   categoriaId: string;
   nota: string;
   origen: OrigenMovimiento;
+  titulo: string;
+  /** Tope del monto con su mensaje (p. ej. no retirar más de lo ahorrado). */
+  montoMaximo?: { valor: number; mensaje: string };
 }
 
 interface Props {
   abierta: boolean;
   onCerrar: () => void;
   movimiento?: Movimiento;
-  /** Para registrar el pago de un pendiente (fijo, y luego deuda o meta). Se ignora si hay `movimiento`. */
+  /** Para registrar un pago, abono o retiro ligado a un fijo, deuda o meta. Se ignora si hay `movimiento`. */
   prellenado?: Prellenado;
 }
 
 export function RegistroRapido({ abierta, onCerrar, movimiento, prellenado }: Props) {
   const pago = movimiento ? undefined : prellenado;
-  const titulo = movimiento ? 'Editar movimiento' : pago ? 'Registrar pago' : 'Nuevo movimiento';
-  const clave = movimiento?.id ?? (pago ? `pago:${pago.origen.id}` : 'nuevo');
+  const titulo = movimiento ? 'Editar movimiento' : pago ? pago.titulo : 'Nuevo movimiento';
+  const clave = movimiento?.id ?? (pago ? `pago:${pago.origen.tipo}:${pago.origen.id}:${pago.tipo}` : 'nuevo');
   return (
     <HojaInferior abierta={abierta} onCerrar={onCerrar} titulo={titulo}>
       <FormularioMovimiento key={clave} movimiento={movimiento} prellenado={pago} onListo={onCerrar} />
@@ -61,7 +66,7 @@ function FormularioMovimiento({
   const { datos: categorias } = useCategorias(usuario.uid);
 
   const montoInicial = movimiento?.monto ?? prellenado?.monto;
-  const [tipo, setTipo] = useState<TipoMovimiento>(movimiento?.tipo ?? 'gasto');
+  const [tipo, setTipo] = useState<TipoMovimiento>(movimiento?.tipo ?? prellenado?.tipo ?? 'gasto');
   const [montoTexto, setMontoTexto] = useState(montoInicial ? agruparMiles(String(montoInicial)) : '');
   const [categoriaId, setCategoriaId] = useState(movimiento?.categoriaId ?? prellenado?.categoriaId ?? '');
   const [fecha, setFecha] = useState(movimiento?.fecha ?? fechaLocalISO());
@@ -82,6 +87,8 @@ function FormularioMovimiento({
     e.preventDefault();
     const formulario = { tipo, monto: parsearMonto(montoTexto), categoriaId, fecha, nota };
     const encontrados = validarMovimiento(formulario);
+    const maximo = prellenado?.montoMaximo;
+    if (maximo && formulario.monto !== null && formulario.monto > maximo.valor) encontrados.monto = maximo.mensaje;
     setErrores(encontrados);
     if (Object.keys(encontrados).length > 0) return;
 
@@ -104,7 +111,7 @@ function FormularioMovimiento({
 
   return (
     <form onSubmit={guardar} className="space-y-5" noValidate>
-      {/* Un pago siempre es gasto: cambiarlo a ingreso rompería planeado vs real. */}
+      {/* Ligado a un fijo, deuda o meta: el tipo lo define el origen. */}
       {!prellenado && !movimiento?.origen && <SelectorTipo valor={tipo} onCambio={cambiarTipo} />}
 
       <div>

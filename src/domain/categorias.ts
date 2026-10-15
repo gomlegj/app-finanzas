@@ -16,6 +16,9 @@ export interface Categoria extends DatosCategoria {
 
 const MAX_NOMBRE = 40;
 
+export const ID_AHORRO = 'ahorro';
+export const ID_RETIRO_AHORRO = 'retiro-ahorro';
+
 function crear(tipo: TipoCategoria, id: string, nombre: string, icono: string, color: string, orden: number, sistema = false): Categoria {
   return { id, nombre, icono, color, tipo, orden, sistema, archivada: false };
 }
@@ -30,17 +33,18 @@ export const CATEGORIAS_POR_DEFECTO: readonly Categoria[] = [
   crear('gasto', 'ropa', 'Ropa', '👕', '#14b8a6', 6),
   crear('gasto', 'educacion', 'Educación', '📚', '#6366f1', 7),
   crear('gasto', 'deudas', 'Deudas', '💳', '#64748b', 8, true),
-  crear('gasto', 'ahorro', 'Ahorro', '🐷', '#10b981', 9, true),
+  crear('gasto', ID_AHORRO, 'Ahorro', '🐿️', '#10b981', 9, true),
   crear('gasto', 'otros-gasto', 'Otros', '📦', '#94a3b8', 10),
   crear('ingreso', 'salario', 'Salario', '💼', '#10b981', 0),
   crear('ingreso', 'extra', 'Extra', '✨', '#f59e0b', 1),
   crear('ingreso', 'otros-ingreso', 'Otros', '💰', '#84cc16', 2),
+  crear('ingreso', ID_RETIRO_AHORRO, 'Retiro de ahorro', '💸', '#10b981', 3, true),
 ];
 
 export const ICONOS_DISPONIBLES: readonly string[] = [
   '🍔', '🛒', '☕', '🚌', '🚕', '⛽', '🏠',
   '💡', '📱', '🩺', '💊', '🎬', '🎮', '👕',
-  '💇', '📚', '🎁', '🐶', '✈️', '💳', '🐷',
+  '💇', '📚', '🎁', '🐶', '✈️', '💳', '🐿️',
   '📦', '💼', '✨', '💰', '🏦', '🧾', '❤️',
 ];
 

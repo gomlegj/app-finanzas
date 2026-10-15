@@ -15,28 +15,35 @@ interface Props {
   onAbrirPago: (movimientoId: string) => void;
 }
 
-export function FijosQuincena({ pendientes, categorias, moneda, cargando, error, onPagar, onAbrirPago }: Props) {
+export function PendientesQuincena({ pendientes, categorias, moneda, cargando, error, onPagar, onAbrirPago }: Props) {
   return (
     <section>
-      <h2 className="mb-2 font-semibold text-slate-900">Fijos de esta quincena</h2>
+      <h2 className="mb-2 font-semibold text-slate-900">Pendientes de esta quincena</h2>
       {error ? (
         <p role="alert" className="rounded-2xl bg-rose-50 p-4 text-center text-sm text-rose-700">
-          No se pudieron cargar tus fijos.
+          No se pudieron cargar tus pendientes.
         </p>
       ) : cargando ? (
         <p className="py-6 text-center text-slate-400">Cargando…</p>
       ) : pendientes.length === 0 ? (
         <div className="rounded-2xl bg-white p-5 text-center text-sm text-slate-500 shadow-sm">
-          No tienes gastos fijos en esta quincena.{' '}
+          Nada pendiente en esta quincena. Agrega{' '}
           <Link to="/ajustes/fijos" className="font-medium text-emerald-600">
-            Agrégalos en Ajustes
+            gastos fijos
+          </Link>{' '}
+          o crea una{' '}
+          <Link to="/metas" className="font-medium text-emerald-600">
+            meta
           </Link>
+          .
         </div>
       ) : (
         <ul className="rounded-2xl bg-white p-1 shadow-sm">
           {pendientes.map((p) => {
             const categoria = categorias.get(p.categoriaId);
-            const burbuja = <BurbujaCategoria icono={categoria?.icono ?? '❔'} color={categoria?.color ?? '#94a3b8'} />;
+            const burbuja = (
+              <BurbujaCategoria icono={p.icono ?? categoria?.icono ?? '❔'} color={p.color ?? categoria?.color ?? '#94a3b8'} />
+            );
             const { pagado } = p;
             return (
               <li key={p.origen.id}>
@@ -68,7 +75,7 @@ export function FijosQuincena({ pendientes, categorias, moneda, cargando, error,
                       onClick={() => onPagar(p)}
                       className="rounded-xl bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
                     >
-                      Pagado
+                      {p.origen.tipo === 'meta' ? 'Abonar' : 'Pagado'}
                     </button>
                   </div>
                 )}
