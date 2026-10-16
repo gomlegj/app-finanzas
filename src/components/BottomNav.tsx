@@ -1,19 +1,19 @@
 import { NavLink } from 'react-router';
-import { House, ListOrdered, Plus, Target } from 'lucide-react';
+import { CreditCard, House, ListOrdered, Plus, Target } from 'lucide-react';
 
 const claseEnlace = ({ isActive }: { isActive: boolean }) =>
   `flex flex-1 flex-col items-center gap-1 py-2 text-xs font-medium ${isActive ? 'text-emerald-600' : 'text-slate-400'}`;
 
 export function BottomNav({ onAgregar }: { onAgregar: () => void }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-end border-t border-slate-200 bg-white px-6 pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-end border-t border-slate-200 bg-white px-2 pb-[env(safe-area-inset-bottom)]">
       <NavLink to="/" end className={claseEnlace}>
         <House size={22} />
         Inicio
       </NavLink>
-      <NavLink to="/metas" className={claseEnlace}>
-        <Target size={22} />
-        Metas
+      <NavLink to="/movimientos" className={claseEnlace}>
+        <ListOrdered size={22} />
+        Movimientos
       </NavLink>
       <div className="flex flex-1 justify-center">
         <button
@@ -25,9 +25,13 @@ export function BottomNav({ onAgregar }: { onAgregar: () => void }) {
           <Plus size={28} />
         </button>
       </div>
-      <NavLink to="/movimientos" className={claseEnlace}>
-        <ListOrdered size={22} />
-        Movimientos
+      <NavLink to="/metas" className={claseEnlace}>
+        <Target size={22} />
+        Metas
+      </NavLink>
+      <NavLink to="/deudas" className={claseEnlace}>
+        <CreditCard size={22} />
+        Deudas
       </NavLink>
     </nav>
   );
