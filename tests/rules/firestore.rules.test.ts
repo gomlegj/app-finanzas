@@ -137,12 +137,6 @@ describe('categorías', () => {
   });
 });
 
-describe('colecciones de fases futuras', () => {
-  it.each(['deudas'])('rechaza escribir en %s', async (coleccion) => {
-    await assertFails(setDoc(doc(como(ALICIA), `users/${ALICIA}/${coleccion}/x`), { nombre: 'x' }));
-  });
-});
-
 describe('perfil validado', () => {
   const perfil = (uid: string) => doc(como(uid), 'users', uid);
   const base = { nombre: 'Alicia', email: 'a@x.com', moneda: 'COP', diasPago: [15, 30] };
@@ -343,5 +337,50 @@ describe('metas', () => {
     await sembrar(ruta(ALICIA), porCuota);
     await assertFails(getDoc(doc(como(BETO), ruta(ALICIA))));
     await assertFails(setDoc(doc(como(BETO), ruta(ALICIA, 'g9')), porCuota));
+  });
+});
+
+describe('deudas', () => {
+  const ruta = (uid: string, id = 'd1') => `users/${uid}/deudas/${id}`;
+  const deuda = {
+    nombre: 'Visa', tipo: 'tarjeta', saldoBase: 2000000, saldoBaseEn: 1760000000000,
+    cuota: 300000, diaPago: 5, archivada: false,
+  };
+
+  it('crea deudas de cada tipo', async () => {
+    for (const tipo of ['tarjeta', 'prestamo', 'otro']) {
+      await assertSucceeds(setDoc(doc(como(ALICIA), ruta(ALICIA, tipo)), { ...deuda, tipo }));
+    }
+  });
+
+  it.each([
+    ['nombre vacío', { nombre: '' }],
+    ['tipo inválido', { tipo: 'hipoteca' }],
+    ['saldo negativo', { saldoBase: -1 }],
+    ['saldo decimal', { saldoBase: 10.5 }],
+    ['momento del saldo en 0', { saldoBaseEn: 0 }],
+    ['cuota 0', { cuota: 0 }],
+    ['día 0', { diaPago: 0 }],
+    ['día 32', { diaPago: 32 }],
+    ['archivada como texto', { archivada: 'no' }],
+  ])('rechaza %s', async (_n, cambio) => {
+    await assertFails(setDoc(doc(como(ALICIA), ruta(ALICIA)), { ...deuda, ...cambio }));
+  });
+
+  it('acepta saldo 0 al actualizar', async () => {
+    await sembrar(ruta(ALICIA), deuda);
+    await assertSucceeds(updateDoc(doc(como(ALICIA), ruta(ALICIA)), { saldoBase: 0, saldoBaseEn: 1760000000001 }));
+  });
+
+  it('la dueña archiva pero no borra', async () => {
+    await sembrar(ruta(ALICIA), deuda);
+    await assertSucceeds(updateDoc(doc(como(ALICIA), ruta(ALICIA)), { archivada: true }));
+    await assertFails(deleteDoc(doc(como(ALICIA), ruta(ALICIA))));
+  });
+
+  it('otro usuario no lee ni escribe deudas ajenas', async () => {
+    await sembrar(ruta(ALICIA), deuda);
+    await assertFails(getDoc(doc(como(BETO), ruta(ALICIA))));
+    await assertFails(setDoc(doc(como(BETO), ruta(ALICIA, 'd9')), deuda));
   });
 });

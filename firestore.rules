@@ -106,6 +106,24 @@ service cloud.firestore {
         // Se archivan: borrar dejaría abonos sin su meta.
         allow delete: if false;
       }
+
+      match /deudas/{id} {
+        function deudaValida() {
+          let d = request.resource.data;
+          return d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 40
+            && d.tipo in ['tarjeta', 'prestamo', 'otro']
+            && d.saldoBase is int && d.saldoBase >= 0
+            && d.saldoBaseEn is int && d.saldoBaseEn > 0
+            && d.cuota is int && d.cuota > 0
+            && d.diaPago is int && d.diaPago >= 1 && d.diaPago <= 31
+            && d.archivada is bool;
+        }
+
+        allow read: if esDueno(uid);
+        allow create, update: if esDueno(uid) && deudaValida();
+        // Se archivan: borrar dejaría pagos sin su deuda.
+        allow delete: if false;
+      }
     }
   }
 }
