@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import type { Unsubscribe } from 'firebase/firestore';
 import type { Categoria } from '../domain/categorias';
+import type { Deuda } from '../domain/deudas';
 import type { Fijo } from '../domain/fijos';
 import type { Meta } from '../domain/metas';
 import type { Movimiento } from '../domain/movimientos';
 import { escucharCategorias } from './categorias';
+import { escucharDeudas } from './deudas';
 import { escucharFijos } from './fijos';
 import { escucharMetas } from './metas';
-import { escucharMovimientosDeMetas, escucharMovimientosEntre } from './movimientos';
+import { escucharMovimientosEntre, escucharMovimientosPorOrigen } from './movimientos';
 import { escucharPerfil, type Perfil } from './usuario';
 
 interface Escucha<T> {
@@ -63,8 +65,20 @@ export function useMetas(uid: string): Escucha<Meta[]> {
 
 export function useMovimientosDeMetas(uid: string): Escucha<Movimiento[]> {
   return useEscucha<Movimiento[]>(
-    (cb, falla) => escucharMovimientosDeMetas(uid, cb, falla),
+    (cb, falla) => escucharMovimientosPorOrigen(uid, 'meta', cb, falla),
     `movimientos-metas:${uid}`,
+    SIN_DATOS,
+  );
+}
+
+export function useDeudas(uid: string): Escucha<Deuda[]> {
+  return useEscucha<Deuda[]>((cb, falla) => escucharDeudas(uid, cb, falla), `deudas:${uid}`, SIN_DATOS);
+}
+
+export function useMovimientosDeDeudas(uid: string): Escucha<Movimiento[]> {
+  return useEscucha<Movimiento[]>(
+    (cb, falla) => escucharMovimientosPorOrigen(uid, 'deuda', cb, falla),
+    `movimientos-deudas:${uid}`,
     SIN_DATOS,
   );
 }
