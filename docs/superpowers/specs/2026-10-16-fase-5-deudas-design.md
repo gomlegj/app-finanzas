@@ -17,7 +17,7 @@ Criterios de éxito:
 ## 2. Conceptos
 
 - **Compras con tarjeta**: no se registran como gasto; solo el pago de la cuota es gasto (categoría "Deudas"). Evita contar dos veces.
-- **Saldo base**: último saldo conocido (al crear la deuda o al "Actualizar saldo"), con el **momento** (`saldoBaseEn`, milisegundos de época) en que se registró.
+- **Saldo base**: último saldo conocido (al crear la deuda o al "Actualizar saldo"), con el **momento** (`saldoBaseEn`) en que se registró, tomado de la **hora del servidor** (no del celular) para compararlo sin desfases con la hora de registro de los pagos.
 - **Pago de la deuda**: movimiento `tipo: 'gasto'` con `origen: { tipo: 'deuda', id }`.
 - **Saldo** (calculado, no guardado) = `max(0, saldoBase − Σ pagos registrados después de saldoBaseEn)`.
   - "Registrado después" se mide con el momento de registro del movimiento (`creadoEn` del documento). Un movimiento aún sin sincronizar (sin `creadoEn` del servidor) cuenta como posterior.
@@ -26,6 +26,7 @@ Criterios de éxito:
 - **Cuotas estimadas**: `ceil(saldo / cuota)` ("≈ N cuotas"). Es un estimado: en préstamos con intereses se corrige al actualizar el saldo.
 - **Próximo pago**: primera fecha ≥ hoy con el día de pago; si el día no existe en el mes, el último día del mes.
 - **Vencimiento en una quincena**: la fecha de pago (ajustada al último día si hace falta) del mes de `quincena.desde` o del mes de `quincena.hasta` cae dentro de `[desde, hasta]`.
+- **Saldo copiado después del vencimiento**: si `saldoBaseEn` (fecha local) es posterior al vencimiento de la quincena, esa cuota se considera incluida en el saldo y no se pide.
 - **Pendiente de deuda**: planeado = `min(cuota, saldoAlInicio)`, donde `saldoAlInicio` descuenta solo pagos con `fecha < quincena.desde`; pagado si hay pagos con fecha en la quincena (se suman).
 
 ## 3. Alcance
@@ -41,7 +42,7 @@ users/{uid}/deudas/{id}
   nombre: string (1–40)
   tipo: 'tarjeta' | 'prestamo' | 'otro'
   saldoBase: int ≥ 0
-  saldoBaseEn: int > 0        // ms de época (reloj del dispositivo) al crear o actualizar el saldo
+  saldoBaseEn: timestamp      // hora del servidor al crear o actualizar el saldo (la app lo lee en ms)
   cuota: int > 0
   diaPago: int 1–31
   archivada: bool
@@ -55,14 +56,15 @@ Categoría: se usa la de sistema existente `deudas` (💳).
 ## 5. Reglas de seguridad
 
 - `deudas/{id}`: dueña lee, crea y actualiza con validación completa; **no** se puede borrar.
-  - `nombre` 1–40; `tipo` en la lista; `saldoBase` int ≥ 0; `saldoBaseEn` int > 0; `cuota` int > 0; `diaPago` int 1–31; `archivada` bool.
+  - `nombre` 1–40; `tipo` en la lista; `saldoBase` int ≥ 0; `saldoBaseEn` timestamp; `cuota` int > 0; `diaPago` int 1–31; `archivada` bool.
+  - Al crear, `saldoBaseEn == request.time`; al actualizar, no cambia o es `request.time`.
 - `movimientos`: sin cambios (un `origen` deuda solo puede ser gasto).
 
 ## 6. Dominio
 
 ### 6.1 `src/domain/deudas.ts` (nuevo, TDD)
 - Tipos: `TipoDeuda`, `DatosDeudaEditable` (nombre, tipo, cuota, diaPago), `DatosDeuda` (+ saldoBase, saldoBaseEn, archivada), `Deuda`, `FormularioDeuda`, `ErroresDeuda`.
-- `validarDeuda(formulario)`: nombre 1–40; saldo ≥ 0 (al crear); cuota > 0; día 1–31.
+- `validarDeuda(formulario)`: nombre 1–40; saldo > 0 (al crear; una deuda en 0 no tiene sentido registrarla); cuota > 0; día 1–31.
 - `saldo(deuda, movimientos)`, `pagada(deuda, saldo)`, `cuotasEstimadas(deuda, saldo)`.
 - `proximoPago(deuda, hoy)`: `'YYYY-MM-DD'`.
 - `venceEnQuincena(diaPago, quincena)`: fecha de vencimiento dentro de la quincena o `null`.
@@ -78,7 +80,7 @@ Categoría: se usa la de sistema existente `deudas` (💳).
 
 ## 7. Capa de datos
 
-- `src/data/deudas.ts`: `escucharDeudas`, `crearDeuda` (saldoBaseEn = `Date.now()`), `actualizarDeuda` (datos editables), `actualizarSaldo(uid, id, saldo)` (saldoBase + saldoBaseEn = `Date.now()`), `archivarDeuda`.
+- `src/data/deudas.ts`: `escucharDeudas`, `crearDeuda` (saldoBaseEn = `serverTimestamp()`), `actualizarDeuda` (datos editables), `actualizarSaldo(uid, id, saldo)` (saldoBase + saldoBaseEn = `serverTimestamp()`); `escucharDeudas` lo lee con `serverTimestamps: 'estimate'` y lo convierte a ms, `archivarDeuda`.
 - `src/data/movimientos.ts`: los listeners exponen `registradoEn` (ms) desde `creadoEn`; `escucharMovimientosDeDeudas` (`where('origen.tipo', '==', 'deuda')`).
 - `src/data/hooks.ts`: `useDeudas`, `useMovimientosDeDeudas`.
 

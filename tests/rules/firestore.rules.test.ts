@@ -5,7 +5,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, deleteField, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, deleteField, doc, getDoc, serverTimestamp, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import { MONEDAS_DISPONIBLES } from '../../src/domain/dinero';
 
@@ -343,14 +343,23 @@ describe('metas', () => {
 describe('deudas', () => {
   const ruta = (uid: string, id = 'd1') => `users/${uid}/deudas/${id}`;
   const deuda = {
-    nombre: 'Visa', tipo: 'tarjeta', saldoBase: 2000000, saldoBaseEn: 1760000000000,
+    nombre: 'Visa', tipo: 'tarjeta', saldoBase: 2000000, saldoBaseEn: Timestamp.fromMillis(1760000000000),
     cuota: 300000, diaPago: 5, archivada: false,
   };
+  const nueva = { ...deuda, saldoBaseEn: serverTimestamp() };
 
-  it('crea deudas de cada tipo', async () => {
+  it('crea deudas de cada tipo con la hora del servidor', async () => {
     for (const tipo of ['tarjeta', 'prestamo', 'otro']) {
-      await assertSucceeds(setDoc(doc(como(ALICIA), ruta(ALICIA, tipo)), { ...deuda, tipo }));
+      await assertSucceeds(setDoc(doc(como(ALICIA), ruta(ALICIA, tipo)), { ...nueva, tipo }));
     }
+  });
+
+  it('el momento del saldo debe ser la hora del servidor', async () => {
+    await assertFails(setDoc(doc(como(ALICIA), ruta(ALICIA)), { ...deuda, saldoBaseEn: 1760000000000 }));
+    await assertFails(setDoc(doc(como(ALICIA), ruta(ALICIA)), deuda));
+    await sembrar(ruta(ALICIA, 'x'), deuda);
+    await assertFails(updateDoc(doc(como(ALICIA), ruta(ALICIA, 'x')), { saldoBase: 5, saldoBaseEn: Timestamp.fromMillis(1) }));
+    await assertSucceeds(updateDoc(doc(como(ALICIA), ruta(ALICIA, 'x')), { cuota: 1 }));
   });
 
   it.each([
@@ -358,18 +367,17 @@ describe('deudas', () => {
     ['tipo inválido', { tipo: 'hipoteca' }],
     ['saldo negativo', { saldoBase: -1 }],
     ['saldo decimal', { saldoBase: 10.5 }],
-    ['momento del saldo en 0', { saldoBaseEn: 0 }],
     ['cuota 0', { cuota: 0 }],
     ['día 0', { diaPago: 0 }],
     ['día 32', { diaPago: 32 }],
     ['archivada como texto', { archivada: 'no' }],
   ])('rechaza %s', async (_n, cambio) => {
-    await assertFails(setDoc(doc(como(ALICIA), ruta(ALICIA)), { ...deuda, ...cambio }));
+    await assertFails(setDoc(doc(como(ALICIA), ruta(ALICIA)), { ...nueva, ...cambio }));
   });
 
   it('acepta saldo 0 al actualizar', async () => {
     await sembrar(ruta(ALICIA), deuda);
-    await assertSucceeds(updateDoc(doc(como(ALICIA), ruta(ALICIA)), { saldoBase: 0, saldoBaseEn: 1760000000001 }));
+    await assertSucceeds(updateDoc(doc(como(ALICIA), ruta(ALICIA)), { saldoBase: 0, saldoBaseEn: serverTimestamp() }));
   });
 
   it('la dueña archiva pero no borra', async () => {
@@ -381,6 +389,6 @@ describe('deudas', () => {
   it('otro usuario no lee ni escribe deudas ajenas', async () => {
     await sembrar(ruta(ALICIA), deuda);
     await assertFails(getDoc(doc(como(BETO), ruta(ALICIA))));
-    await assertFails(setDoc(doc(como(BETO), ruta(ALICIA, 'd9')), deuda));
+    await assertFails(setDoc(doc(como(BETO), ruta(ALICIA, 'd9')), nueva));
   });
 });

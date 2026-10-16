@@ -201,3 +201,12 @@ describe('pendientesDeDeudas', () => {
     expect(pendientesDeDeudas([deuda('arch', { archivada: true }), saldada], Q_FIN_OCT, previos)).toEqual([]);
   });
 });
+
+describe('saldo actualizado después del vencimiento', () => {
+  it('si el saldo se registró después del vencimiento de la quincena, la cuota ya está incluida y no se pide', () => {
+    const despues = new Date('2026-11-06T09:00:00').getTime();
+    const mismoDia = new Date('2026-11-05T09:00:00').getTime();
+    expect(pendientesDeDeudas([deuda('v', { saldoBaseEn: despues })], Q_FIN_OCT, [])).toEqual([]);
+    expect(pendientesDeDeudas([deuda('v', { saldoBaseEn: mismoDia })], Q_FIN_OCT, [])).toHaveLength(1);
+  });
+});

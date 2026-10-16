@@ -19,7 +19,7 @@ export interface DatosDeudaEditable {
 export interface DatosDeuda extends DatosDeudaEditable {
   /** Último saldo conocido (al crear o al actualizar con el extracto). */
   saldoBase: number;
-  /** Momento (ms) en que se registró `saldoBase`. */
+  /** Momento (ms, hora del servidor) en que se registró `saldoBase`. */
   saldoBaseEn: number;
   archivada: boolean;
 }
@@ -118,7 +118,11 @@ export function pendientesDeDeudas(
 ): Pendiente[] {
   const resultado: Pendiente[] = [];
   for (const deuda of deudas) {
-    if (deuda.archivada || !venceEnQuincena(deuda.diaPago, quincena)) continue;
+    if (deuda.archivada) continue;
+    const vence = venceEnQuincena(deuda.diaPago, quincena);
+    if (!vence) continue;
+    // Saldo copiado del extracto después del vencimiento: esa cuota ya está incluida en él.
+    if (fechaLocalISO(new Date(deuda.saldoBaseEn)) > vence) continue;
     const propios = movimientosDeDeudas.filter((m) => esPagoDe(m, deuda.id));
     const alInicio = saldo(deuda, propios.filter((m) => m.fecha < quincena.desde));
     if (alInicio === 0) continue;
