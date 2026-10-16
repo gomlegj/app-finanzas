@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Trash2 } from 'lucide-react';
 import { BurbujaCategoria } from '../../components/BurbujaCategoria';
 import { MensajeError } from '../../components/MensajeError';
+import { Segmentado } from '../../components/Segmentado';
 import { useToast } from '../../components/toastContexto';
 import { actualizarFijo, borrarFijo, crearFijo } from '../../data/fijos';
 import { diasRecordatorio, enlaceCalendario } from '../../domain/calendario';
@@ -202,39 +203,5 @@ export function FormularioFijo({ fijo, categorias, diasPago, moneda, onListo }: 
         </button>
       )}
     </form>
-  );
-}
-
-interface PropsSegmentado<T extends string | number> {
-  etiqueta: string;
-  valor: T;
-  onCambio: (valor: T) => void;
-  opciones: { valor: T; etiqueta: string }[];
-}
-
-function Segmentado<T extends string | number>({ etiqueta, valor, onCambio, opciones }: PropsSegmentado<T>) {
-  return (
-    <fieldset>
-      <legend className="mb-2 text-sm font-medium text-slate-600">{etiqueta}</legend>
-      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1" role="radiogroup">
-        {opciones.map((opcion) => {
-          const activa = opcion.valor === valor;
-          return (
-            <button
-              key={opcion.valor}
-              type="button"
-              role="radio"
-              aria-checked={activa}
-              onClick={() => onCambio(opcion.valor)}
-              className={`rounded-xl py-2 text-sm font-semibold transition ${
-                activa ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'
-              }`}
-            >
-              {opcion.etiqueta}
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
   );
 }

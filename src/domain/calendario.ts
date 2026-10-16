@@ -1,6 +1,6 @@
 import { addDays, parseISO } from 'date-fns';
 import { formatearMonto } from './dinero';
-import { fechaLocalISO } from './fechas';
+import { fechaEnMes, fechaLocalISO } from './fechas';
 import type { DatosFijo } from './fijos';
 import { ordenarDiasPago, type DiasPago } from './quincena';
 
@@ -30,18 +30,12 @@ export function reglaRecurrencia(dias: readonly number[]): string {
   return `${base}${[dias[0], ...desde28Hasta(ultimo)].join(',')};BYSETPOS=1,-1`;
 }
 
-/** Fecha en el mes indicado (puede salirse de 0–11); si el día no existe, el último del mes. */
-function enMes(anio: number, mes: number, dia: number): Date {
-  const ultimo = new Date(anio, mes + 1, 0).getDate();
-  return new Date(anio, mes, Math.min(dia, ultimo));
-}
-
 /** Primera fecha desde hoy (incluido) en que cae alguno de los días. */
 export function proximaFecha(dias: readonly number[], hoy: Date = new Date()): string {
   const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
   for (const delta of [0, 1]) {
     const candidatas = dias
-      .map((d) => enMes(inicio.getFullYear(), inicio.getMonth() + delta, d))
+      .map((d) => fechaEnMes(inicio.getFullYear(), inicio.getMonth() + delta, d))
       .filter((f) => f >= inicio)
       .sort((a, b) => a.getTime() - b.getTime());
     if (candidatas.length > 0) return fechaLocalISO(candidatas[0]);

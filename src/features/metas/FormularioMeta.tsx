@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { Archive } from 'lucide-react';
 import { BurbujaCategoria } from '../../components/BurbujaCategoria';
+import { CampoMonto } from '../../components/CampoMonto';
 import { MensajeError } from '../../components/MensajeError';
 import { SelectorColor, SelectorIcono } from '../../components/SelectorIconoColor';
 import { useToast } from '../../components/toastContexto';
 import { archivarMeta, actualizarMeta, crearMeta } from '../../data/metas';
 import { COLORES_DISPONIBLES, ICONOS_DISPONIBLES } from '../../domain/categorias';
-import { actualizarTextoMonto, agruparMiles, formatearMonto, parsearMonto } from '../../domain/dinero';
+import { agruparMiles, formatearMonto, parsearMonto } from '../../domain/dinero';
 import { fechaConAnio, fechaLocalISO } from '../../domain/fechas';
 import {
   cuotaDeQuincena,
@@ -180,35 +181,5 @@ export function FormularioMeta({ meta, movidoAntes = 0, diasPago, moneda, onList
         </button>
       )}
     </form>
-  );
-}
-
-function CampoMonto({
-  etiqueta,
-  valor,
-  onCambio,
-  error,
-}: {
-  etiqueta: string;
-  valor: string;
-  onCambio: (texto: string) => void;
-  error?: string;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-sm font-medium text-slate-600">{etiqueta}</span>
-      <div className="flex items-baseline gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-        <span className="text-slate-400">$</span>
-        <input
-          inputMode="numeric"
-          autoComplete="off"
-          placeholder="0"
-          value={valor}
-          onChange={(e) => onCambio(actualizarTextoMonto(e.target.value))}
-          className="w-full min-w-0 bg-transparent tabular-nums outline-none"
-        />
-      </div>
-      <MensajeError mensaje={error} />
-    </label>
   );
 }

@@ -5,6 +5,8 @@ import type { Categoria } from '../../domain/categorias';
 import { formatearMonto } from '../../domain/dinero';
 import type { Pendiente } from '../../domain/fijos';
 
+const TEXTO_BOTON: Record<Pendiente['origen']['tipo'], string> = { fijo: 'Pagado', meta: 'Abonar', deuda: 'Pagar' };
+
 interface Props {
   pendientes: readonly Pendiente[];
   categorias: ReadonlyMap<string, Categoria>;
@@ -46,7 +48,7 @@ export function PendientesQuincena({ pendientes, categorias, moneda, cargando, e
             );
             const { pagado } = p;
             return (
-              <li key={p.origen.id}>
+              <li key={`${p.origen.tipo}:${p.origen.id}`}>
                 {pagado ? (
                   <button
                     type="button"
@@ -75,7 +77,7 @@ export function PendientesQuincena({ pendientes, categorias, moneda, cargando, e
                       onClick={() => onPagar(p)}
                       className="rounded-xl bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
                     >
-                      {p.origen.tipo === 'meta' ? 'Abonar' : 'Pagado'}
+                      {TEXTO_BOTON[p.origen.tipo]}
                     </button>
                   </div>
                 )}

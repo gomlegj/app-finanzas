@@ -10,12 +10,21 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  type DocumentData,
+  type QueryDocumentSnapshot,
+  type Timestamp,
   type Unsubscribe,
 } from 'firebase/firestore';
 import type { DatosMovimiento, Movimiento, OrigenMovimiento } from '../domain/movimientos';
 import { db } from '../lib/firebase';
 
 const coleccion = (uid: string) => collection(db, 'users', uid, 'movimientos');
+
+function aMovimiento(d: QueryDocumentSnapshot<DocumentData>): Movimiento {
+  const { creadoEn, ...datos } = d.data() as Omit<Movimiento, 'id' | 'registradoEn'> & { creadoEn?: Timestamp | null };
+  // `creadoEn` es null mientras el servidor no confirma la escritura (p. ej. sin conexión).
+  return { id: d.id, ...datos, ...(creadoEn ? { registradoEn: creadoEn.toMillis() } : {}) };
+}
 
 export function escucharMovimientosEntre(
   uid: string,
@@ -32,7 +41,7 @@ export function escucharMovimientosEntre(
   );
   return onSnapshot(
     consulta,
-    (snap) => alCambiar(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Movimiento, 'id'>) }))),
+    (snap) => alCambiar(snap.docs.map(aMovimiento)),
     (error) => {
       console.error('Error escuchando movimientos', error);
       alFallar?.(error);
@@ -40,17 +49,18 @@ export function escucharMovimientosEntre(
   );
 }
 
-/** Todos los abonos y retiros de metas, de cualquier fecha: lo ahorrado se calcula con ellos. */
-export function escucharMovimientosDeMetas(
+/** Todos los movimientos ligados a metas o deudas, de cualquier fecha: saldos y ahorros se calculan con ellos. */
+export function escucharMovimientosPorOrigen(
   uid: string,
+  tipo: 'meta' | 'deuda',
   alCambiar: (movimientos: Movimiento[]) => void,
   alFallar?: (error: unknown) => void,
 ): Unsubscribe {
   return onSnapshot(
-    query(coleccion(uid), where('origen.tipo', '==', 'meta')),
-    (snap) => alCambiar(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Movimiento, 'id'>) }))),
+    query(coleccion(uid), where('origen.tipo', '==', tipo)),
+    (snap) => alCambiar(snap.docs.map(aMovimiento)),
     (error) => {
-      console.error('Error escuchando movimientos de metas', error);
+      console.error(`Error escuchando movimientos de ${tipo}`, error);
       alFallar?.(error);
     },
   );

@@ -1,7 +1,17 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { FilaMovimiento } from '../../components/FilaMovimiento';
-import { useCategorias, useFijos, useMetas, useMovimientosDeMetas, useMovimientosEntre, usePerfil } from '../../data/hooks';
+import {
+  useCategorias,
+  useDeudas,
+  useFijos,
+  useMetas,
+  useMovimientosDeDeudas,
+  useMovimientosDeMetas,
+  useMovimientosEntre,
+  usePerfil,
+} from '../../data/hooks';
+import { pendientesDeDeudas } from '../../domain/deudas';
 import { formatearMonto } from '../../domain/dinero';
 import { comprometido, ordenarPendientes, pendientesDeQuincena, type Pendiente } from '../../domain/fijos';
 import { pendientesDeMetas } from '../../domain/metas';
@@ -30,11 +40,14 @@ export function InicioPage() {
   const fijos = useFijos(usuario.uid);
   const metas = useMetas(usuario.uid);
   const movimientosDeMetas = useMovimientosDeMetas(usuario.uid);
+  const deudas = useDeudas(usuario.uid);
+  const movimientosDeDeudas = useMovimientosDeDeudas(usuario.uid);
 
   const porId = new Map(categorias.map((c) => [c.id, c]));
   const pendientes = ordenarPendientes([
     ...pendientesDeQuincena(fijos.datos, quincena, movimientos),
     ...pendientesDeMetas(metas.datos, quincena, diasPago, movimientosDeMetas.datos),
+    ...pendientesDeDeudas(deudas.datos, quincena, movimientosDeDeudas.datos),
   ]);
   const resumen = resumenQuincena(movimientos, comprometido(pendientes));
   const ultimos = movimientos.slice(0, CANTIDAD_ULTIMOS);
@@ -48,7 +61,7 @@ export function InicioPage() {
         categoriaId: p.categoriaId,
         nota: p.nombre,
         origen: p.origen,
-        titulo: p.origen.tipo === 'meta' ? 'Abonar a la meta' : 'Registrar pago',
+        titulo: p.origen.tipo === 'meta' ? 'Abonar a la meta' : p.origen.tipo === 'deuda' ? 'Pagar cuota' : 'Registrar pago',
       },
     });
   }
@@ -92,9 +105,11 @@ export function InicioPage() {
         pendientes={pendientes}
         categorias={porId}
         moneda={moneda}
-        cargando={fijos.cargando || metas.cargando || movimientosDeMetas.cargando || cargando}
+        cargando={
+          fijos.cargando || metas.cargando || movimientosDeMetas.cargando || deudas.cargando || movimientosDeDeudas.cargando || cargando
+        }
         // Sin todos los datos no se sabe qué está pagado: mostrar botones invitaría a pagar dos veces.
-        error={fijos.error || metas.error || movimientosDeMetas.error || error}
+        error={fijos.error || metas.error || movimientosDeMetas.error || deudas.error || movimientosDeDeudas.error || error}
         onPagar={pagar}
         onAbrirPago={abrirPago}
       />

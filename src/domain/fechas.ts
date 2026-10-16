@@ -52,3 +52,9 @@ export function fechaCorta(iso: string): string {
 export function fechaConAnio(iso: string): string {
   return `${fechaCorta(iso)} ${parseISO(iso).getFullYear()}`;
 }
+
+/** Fecha del `dia` en el mes indicado (`mes` puede salirse de 0–11); si el día no existe, el último del mes. */
+export function fechaEnMes(anio: number, mes: number, dia: number): Date {
+  const ultimo = new Date(anio, mes + 1, 0).getDate();
+  return new Date(anio, mes, Math.min(dia, ultimo));
+}

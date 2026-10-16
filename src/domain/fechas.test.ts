@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { desplazarMes, etiquetaFecha, fechaConAnio, fechaCorta, fechaLocalISO, mesActual, nombreMes, rangoMes } from './fechas';
+import { desplazarMes, etiquetaFecha, fechaConAnio, fechaCorta, fechaEnMes, fechaLocalISO, mesActual, nombreMes, rangoMes } from './fechas';
 
 describe('fechaLocalISO', () => {
   it('usa la fecha local aunque sea de noche', () => {
@@ -61,5 +61,15 @@ describe('fechaConAnio', () => {
   it('día, mes corto y año', () => {
     expect(fechaConAnio('2027-06-15')).toBe('15 jun 2027');
     expect(fechaConAnio('2026-12-01')).toBe('1 dic 2026');
+  });
+});
+
+describe('fechaEnMes', () => {
+  it('ajusta al último día si el día no existe y acepta meses fuera de rango', () => {
+    expect(fechaLocalISO(fechaEnMes(2026, 1, 30))).toBe('2026-02-28');
+    expect(fechaLocalISO(fechaEnMes(2028, 1, 30))).toBe('2028-02-29');
+    expect(fechaLocalISO(fechaEnMes(2026, 10, 31))).toBe('2026-11-30');
+    expect(fechaLocalISO(fechaEnMes(2026, 12, 5))).toBe('2027-01-05');
+    expect(fechaLocalISO(fechaEnMes(2026, 9, 15))).toBe('2026-10-15');
   });
 });

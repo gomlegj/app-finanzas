@@ -19,6 +19,8 @@ export interface OrigenMovimiento {
 export interface Movimiento extends DatosMovimiento {
   id: string;
   origen?: OrigenMovimiento;
+  /** Momento de registro (ms) según el servidor; ausente si aún no se sincroniza. */
+  registradoEn?: number;
 }
 
 export interface FormularioMovimiento {
