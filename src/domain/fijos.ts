@@ -83,7 +83,7 @@ export function ordenarFijos(fijos: readonly Fijo[]): Fijo[] {
 }
 
 export interface Pendiente {
-  origen: { tipo: 'fijo' | 'meta'; id: string };
+  origen: { tipo: 'fijo' | 'meta' | 'deuda'; id: string };
   nombre: string;
   categoriaId: string;
   /** Solo metas: se muestran con su propio ícono y color. */

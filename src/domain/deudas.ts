@@ -1,4 +1,10 @@
+import { parseISO } from 'date-fns';
+import { proximaFecha } from './calendario';
+import { ID_DEUDAS } from './categorias';
+import { fechaEnMes, fechaLocalISO } from './fechas';
+import { ordenarPendientes, resumirPagos, type Pendiente } from './fijos';
 import type { Movimiento } from './movimientos';
+import type { Quincena } from './quincena';
 
 export type TipoDeuda = 'tarjeta' | 'prestamo' | 'otro';
 
@@ -82,4 +88,51 @@ export function cuotasEstimadas(deuda: Pick<Deuda, 'cuota'>, saldoActual: number
 /** Lo que falta de la cuota de esta quincena, sin pasar el saldo. */
 export function sugerenciaDePago(deuda: Pick<Deuda, 'cuota'>, saldoActual: number, pagadoEnQuincena: number): number {
   return Math.min(Math.max(0, deuda.cuota - pagadoEnQuincena), saldoActual);
+}
+
+export function proximoPago(deuda: Pick<Deuda, 'diaPago'>, hoy: Date = new Date()): string {
+  return proximaFecha([deuda.diaPago], hoy);
+}
+
+/** Fecha de vencimiento dentro de la quincena (mes de inicio o de fin), o `null`. */
+export function venceEnQuincena(diaPago: number, quincena: Quincena): string | null {
+  for (const iso of [quincena.desde, quincena.hasta]) {
+    const base = parseISO(iso);
+    const vence = fechaLocalISO(fechaEnMes(base.getFullYear(), base.getMonth(), diaPago));
+    if (vence >= quincena.desde && vence <= quincena.hasta) return vence;
+  }
+  return null;
+}
+
+const enQuincena = (m: Movimiento, q: Quincena) => m.fecha >= q.desde && m.fecha <= q.hasta;
+
+export function pagadoEnQuincena(deuda: Pick<Deuda, 'id'>, movimientos: readonly Movimiento[], quincena: Quincena): number {
+  return movimientos.filter((m) => esPagoDe(m, deuda.id) && enQuincena(m, quincena)).reduce((s, m) => s + m.monto, 0);
+}
+
+/** Cuotas de las deudas que vencen en `quincena`. `movimientosDeDeudas`: pagos de cualquier fecha. */
+export function pendientesDeDeudas(
+  deudas: readonly Deuda[],
+  quincena: Quincena,
+  movimientosDeDeudas: readonly Movimiento[],
+): Pendiente[] {
+  const resultado: Pendiente[] = [];
+  for (const deuda of deudas) {
+    if (deuda.archivada || !venceEnQuincena(deuda.diaPago, quincena)) continue;
+    const propios = movimientosDeDeudas.filter((m) => esPagoDe(m, deuda.id));
+    const alInicio = saldo(deuda, propios.filter((m) => m.fecha < quincena.desde));
+    if (alInicio === 0) continue;
+    const pagos = propios.filter((m) => enQuincena(m, quincena));
+    const pendiente: Pendiente = {
+      origen: { tipo: 'deuda', id: deuda.id },
+      nombre: deuda.nombre,
+      categoriaId: ID_DEUDAS,
+      icono: ICONO_TIPO_DEUDA[deuda.tipo],
+      color: COLOR_DEUDA,
+      planeado: Math.min(deuda.cuota, alInicio),
+    };
+    if (pagos.length > 0) pendiente.pagado = resumirPagos(pagos);
+    resultado.push(pendiente);
+  }
+  return ordenarPendientes(resultado);
 }
